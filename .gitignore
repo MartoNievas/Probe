@@ -1,0 +1,6 @@
+# Ignorar archivos de objeto, que son archivos intermedios generados por el compilador
+*.o
+
+# Ignorar archivos ejecutables comunes
+# El nombre por defecto de GCC es 'a.out'
+a.out
