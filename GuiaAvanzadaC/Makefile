@@ -4,7 +4,7 @@ CC = gcc
 
 CFLAGS = -Wall -g
 
-SRC = main.c list.c type.c
+SRC = Ejercicio19.c
 
 $(TARGET): $(SRC)
 		$(CC) $(CFLAGS) $(SRC) -o $(TARGET)
