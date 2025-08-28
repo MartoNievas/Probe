@@ -59,14 +59,14 @@ void listAddFirst(list_t *l, void *data) {
     return;
   node_t *n = malloc(sizeof(node_t));
   if (n == NULL) {
-    perror("Error en listAddFirst");
+    printf("Error en listAddFirst\n");
     return;
-    n->data = getCopyFuntion(l->type)(data);
-    n->next = l->first;
-    l->first = n;
-    l->size++;
-    printf("Elemento agregado con exito\n");
   }
+  n->data = getCopyFuntion(l->type)(data);
+  n->next = l->first;
+  l->first = n;
+  l->size++;
+  printf("Elemento agregado con exito\n");
 }
 
 // se asume: i < l->size
@@ -76,3 +76,5 @@ void *listGet(list_t *l, uint8_t i) { return NULL; }
 void *listRemove(list_t *l, uint8_t i) { return NULL; }
 
 void listDelete(list_t *l);
+
+void listSwap(list_t *l, uint8_t i, uint8_t j);

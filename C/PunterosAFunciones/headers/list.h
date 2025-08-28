@@ -3,7 +3,6 @@
 
 #include "type.h"
 #include <stdint.h>
-#include <sys/types.h>
 typedef struct node {
   void *data;
   struct node *next;
@@ -18,5 +17,6 @@ void listAddFirst(list_t *l, void *data); // copia el dato
 void *listGet(list_t *l, uint8_t i);      // se asume: i < l->size
 void *listRemove(list_t *l, uint8_t i);   // se asume: i < l->size
 void listDelete(list_t *l);
+void listSwap(list_t *l, uint8_t i, uint8_t j);
 
 #endif
