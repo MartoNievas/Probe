@@ -1,0 +1,3 @@
+Path archivo = Paths.get("ejemplo.txt");
+        String contenido = Files.readString(archivo);
+        System.out.println(contenido);
