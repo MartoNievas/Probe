@@ -18,5 +18,6 @@ void *listGet(list_t *l, uint8_t i);      // se asume: i < l->size
 void *listRemove(list_t *l, uint8_t i);   // se asume: i < l->size
 void listDelete(list_t *l);
 void listSwap(list_t *l, uint8_t i, uint8_t j);
+void print(list_t *l);
 
 #endif

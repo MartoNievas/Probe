@@ -70,11 +70,92 @@ void listAddFirst(list_t *l, void *data) {
 }
 
 // se asume: i < l->size
-void *listGet(list_t *l, uint8_t i) { return NULL; }
+void *listGet(list_t *l, uint8_t i) {
+  if (i >= l->size) {
+    printf("ERROR: Indice fuera de rango\n");
+    return NULL;
+  }
+  node_t *n = l->first;
+  if (n == NULL) {
+    printf("ERROR: la lista esta vacia");
+    return NULL;
+  }
+  for (int k = 0; k < i; k++) {
+    n = n->next;
+  }
+  return n->data;
+}
 
 // se asume: i < l->size
-void *listRemove(list_t *l, uint8_t i) { return NULL; }
+void *listRemove(list_t *l, uint8_t i) {
+  if (i >= l->size) {
+    printf("ERROR: Indice fuera de rango\n");
+    return NULL;
+  }
+  if (l->size == 0) {
+    printf("ERROR: la lista esta vacia\n");
+    return NULL;
+  }
 
-void listDelete(list_t *l);
+  node_t *previous = NULL;
+  node_t *current = l->first;
+  for (int k = 0; k < i; k++) {
+    previous = current;
+    current = current->next;
+  }
+  // Ahora la logica de remover
+
+  void *temp = current->data;
+
+  // Caso especial: eliminar el primero
+  if (previous == NULL) {
+    l->first = current->next;
+  } else {
+    previous->next = current->next;
+  }
+
+  free(current);
+  l->size--;
+
+  return temp;
+}
+
+void listDelete(list_t *l) {
+  if (l == NULL) {
+    printf("ERROR: puntero nulo");
+    return;
+  }
+  node_t *temp = NULL;
+  node_t *n = l->first;
+  if (n == NULL) {
+    printf("ERROR: Null Pointer");
+    return;
+  }
+
+  while (n != NULL) {
+
+    temp = n;
+    n = n->next;
+    getRmFuntion(l->type)(temp->data);
+    free(temp);
+  }
+  free(l);
+}
 
 void listSwap(list_t *l, uint8_t i, uint8_t j);
+
+void print(list_t *l) {
+  if (l == NULL) {
+    printf("ERROR: Null Pointer");
+    return;
+  }
+  node_t *n = l->first;
+  if (n == NULL) {
+    printf("ERROR: la lista esta vacia");
+    return;
+  }
+  for (int i = 0; i < l->size; i++) {
+    printf("Elemento %d = %p\n", i, n->data);
+    n = n->next;
+  }
+}
