@@ -141,8 +141,69 @@ void listDelete(list_t *l) {
   }
   free(l);
 }
+// Tomamos como que prev = NULL y curr = l->firts != NULL e i < l->size
+static void previousAndCurrenteNode(node_t **prev, node_t **curr, int i) {
+  int k = 0;
+  while (k < i) {
+    *prev = *curr;
+    *curr = (*curr)->next;
+    k++;
+  }
+}
+void listSwap(list_t *l, uint8_t i, uint8_t j) {
+  if (l == NULL || l->size <= 1 || i == j) {
+    printf("Parametro invalidos\n");
+    return;
+  }
+  if (i >= l->size || j >= l->size) {
+    printf("ERROR: indice fuera de rango\n");
+    return;
+  }
+  // Swap en el i siempre esta el inidice mas chico
+  if (i > j) {
+    uint8_t temp = i;
+    i = j;
+    j = temp;
+  }
 
-void listSwap(list_t *l, uint8_t i, uint8_t j);
+  node_t *previ = NULL;
+  node_t *curri = l->first;
+
+  previousAndCurrenteNode(&previ, &curri, i);
+
+  node_t *prevj = NULL;
+  node_t *currj = l->first;
+
+  previousAndCurrenteNode(&prevj, &currj, j);
+  // Veamos los distintos casos
+
+  // caso 1 nodos adyacentes
+  if (curri->next == currj) {
+    if (previ != NULL) {
+      previ->next = currj;
+    } else {
+      l->first = currj;
+    }
+    curri->next = currj->next;
+    currj->next = curri;
+    return; // terminamos la ejecucion
+  }
+
+  // caso 2 nodos no adyacentes
+  if (previ != NULL) {
+    previ->next = currj;
+  } else {
+    l->first = currj;
+  }
+
+  if (prevj != NULL) {
+    prevj->next = curri;
+  }
+
+  node_t *temp = curri->next;
+  curri->next = currj->next;
+  currj->next = temp;
+}
 
 void print(list_t *l) {
   if (l == NULL) {
