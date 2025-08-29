@@ -1,0 +1,50 @@
+# Para evitar subir binarios o .o, ignoro todo en la carpeta solucion
+# menos los archivos de codigo
+*.gdb_history
+
+src/test_utils/venv
+src/test_utils/*.txt
+!src/test_utils/requirements.txt
+
+!src/1\ -\ Introducción
+src/1\ -\ Introducción/*
+!src/1\ -\ Introducción/*.asm
+!src/1\ -\ Introducción/*.md
+!src/1\ -\ Introducción/Makefile 
+
+!src/2\ -\ ABI/
+src/2\ -\ ABI/*
+!src/2\ -\ ABI/*.asm
+!src/2\ -\ ABI/*.c
+!src/2\ -\ ABI/*.h
+!src/2\ -\ ABI/*.md
+!src/2\ -\ ABI/Makefile
+!src/2\ -\ ABI/*.sh
+!src/2\ -\ ABI/*.mac
+
+!src/3\ -\ Alineación\ y\ Estructuras
+src/3\ -\ Alineación\ y\ Estructuras/*
+!src/3\ -\ Alineación\ y\ Estructuras/*.asm
+!src/3\ -\ Alineación\ y\ Estructuras/*.c
+!src/3\ -\ Alineación\ y\ Estructuras/*.h
+!src/3\ -\ Alineación\ y\ Estructuras/*.md
+!src/3\ -\ Alineación\ y\ Estructuras/Makefile
+!src/3\ -\ Alineación\ y\ Estructuras/*.sh
+!src/3\ -\ Alineación\ y\ Estructuras/*.mac
+
+!src/4\ -\ Memoria\ dinámica
+src/4\ -\ Memoria\ dinámica/*
+!src/4\ -\ Memoria\ dinámica/*.asm
+!src/4\ -\ Memoria\ dinámica/*.c
+!src/4\ -\ Memoria\ dinámica/*.h
+!src/4\ -\ Memoria\ dinámica/*.md
+!src/4\ -\ Memoria\ dinámica/Makefile
+!src/4\ -\ Memoria\ dinámica/*.sh
+!src/4\ -\ Memoria\ dinámica/*.mac
+
+!src/5\ -\ Pila
+
+!src/6\ -\ Ejercicios\ tipo\ parcial
+
+
+TP1-b/
