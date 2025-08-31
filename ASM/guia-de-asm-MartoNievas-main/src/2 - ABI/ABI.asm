@@ -150,9 +150,17 @@ alternate_sum_8:
 
 ; SUGERENCIA: investigar uso de instrucciones para convertir enteros a floats y viceversa
 ;void product_2_f(uint32_t * destination, uint32_t x1, float f1);
-;registros: destination[?], x1[?], f1[?]
+;registros: destination[RDI], x1[ESI], f1[XMM0] destination es una direccion de memoria 
 product_2_f:
-	ret
+  ; Convertir a double para mayor precisión
+  cvtsi2sd xmm1, esi      ; entero → double
+  cvtss2sd xmm2, xmm0     ; float → double
+  
+  mulsd xmm1, xmm2        ; multiplicación double
+  cvttsd2si eax, xmm1     ; truncar double → int
+  
+  mov [rdi], eax
+  ret
 
 
 ;extern void product_9_f(double * destination
