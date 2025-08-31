@@ -98,13 +98,54 @@ alternate_sum_4_using_c_alternative:
 
 ; uint32_t alternate_sum_8(uint32_t x1, uint32_t x2, uint32_t x3, uint32_t x4, uint32_t x5, uint32_t x6, uint32_t x7, uint32_t x8);
 ; registros y pila: x1[?], x2[?], x3[?], x4[?], x5[?], x6[?], x7[?], x8[?]
+   ; x1 = edi no volatil
+    ; x2 = esi no volatil
+    ; x3 = edx volatil
+    ; x4 = ecx  volatil
+    ; x5 = r8d  no volatil 
+    ; x6 = r9d  no volatil
+    ; x7 = [rsp+8]   ; 7mo argumento (stack)
+    ; x8 = [rsp+16]  ; 8vo argumento (stack)
 alternate_sum_8:
-	;prologo
+    push RBP
+    mov RBP, RSP
+    sub RSP, 16
 
-	; COMPLETAR
+    mov [RBP - 8], RCX
+    push RDX
+    sub RSP, 8
 
-	;epilogo
-	ret
+    call restar_c        ; eax = x1 - x2
+    add RSP,8
+    pop RDX
+
+    mov EDI, EAX
+    mov ESI, EDX
+    call sumar_c         ; eax = x1 - x2 + x3
+
+    mov EDI, EAX
+    mov ESI, [RBP - 8]
+    call restar_c        ; eax = x1 - x2 + x3 - x4
+
+    mov EDI, EAX
+    mov ESI, R8D
+    call sumar_c         ; eax = ... + x5
+
+    mov EDI, EAX
+    mov ESI, R9D
+    call restar_c        ; eax = ... - x6
+
+    mov EDI, EAX
+    mov ESI, [RBP + 16] ; x7
+    call sumar_c        ; eax = ... - x7
+
+    mov EDI, EAX
+    mov ESI, [RBP + 24] ; x8
+    call restar_c
+
+    mov rsp, rbp
+    pop RBP
+    ret
 
 
 ; SUGERENCIA: investigar uso de instrucciones para convertir enteros a floats y viceversa
