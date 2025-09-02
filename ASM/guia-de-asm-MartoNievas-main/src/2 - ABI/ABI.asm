@@ -168,12 +168,11 @@ product_2_f:
 ;, uint32_t x5, float f5, uint32_t x6, float f6, uint32_t x7, float f7, uint32_t x8, float f8
 ;, uint32_t x9, float f9);
 ;registros y pila: destination[rdi], x1[rsi], f1[xmm0], x2[rdx], f2[xmm1], x3[rcx], f3[xmm2], x4[r8], f4[xmm3]
-;	, x5[r9], f5[xmm4], x6[rsp + 8], f6[xmm5], x7[rsp + 16], f7[xmm6], x8[rsp + 24], f8[xmm7],
-;	, x9[rsp + 32], f9[rsp + 40]
+;	, x5[r9], f5[xmm4], x6[rsp + 16], f6[xmm5], x7[rsp + 24], f7[xmm6], x8[rsp + 32], f8[xmm7],
+;	, x9[rsp + 40], f9[rsp + 48]
 product_9_f:
-
-
-
+  push rbp
+  mov rbp,rsp
 	;convertimos los flotantes de cada registro xmm en doubles
 	cvtss2sd xmm0,xmm0
   cvtss2sd xmm1 , xmm1
@@ -187,14 +186,15 @@ product_9_f:
 
 	;multiplicamos los doubles en xmm0 <- xmm0 * xmm1, xmmo * xmm2 , ...
 	mulsd xmm0, xmm1
-  movss xmm1, [rsp + 40]  ; cargar float de memoria
-  cvtss2sd xmm1, xmm1      ; convertir a double
   mulsd xmm0,xmm2
   mulsd xmm0,xmm3
   mulsd xmm0,xmm4
   mulsd xmm0,xmm5
   mulsd xmm0, xmm6
   mulsd xmm0, xmm7
+
+  movss xmm1, [rsp + 48]  ; cargar float de memoria f9
+  cvtss2sd xmm1, xmm1      ; convertir a double
   mulsd xmm0, xmm1
 
 
@@ -214,9 +214,6 @@ product_9_f:
   cvtsi2sd xmm1, r9
   mulsd xmm0,xmm1
 
-  cvtsi2sd xmm1, [rsp + 8]
-  mulsd xmm0,xmm1
-
   cvtsi2sd xmm1, [rsp + 16]
   mulsd xmm0,xmm1
 
@@ -226,10 +223,14 @@ product_9_f:
   cvtsi2sd xmm1, [rsp + 32]
   mulsd xmm0,xmm1
 
+  cvtsi2sd xmm1, [rsp + 40]
+  mulsd xmm0,xmm1
+
 
   movsd [rdi], xmm0
 
 
 	; epilogo
+  pop rbp
 	ret
 
