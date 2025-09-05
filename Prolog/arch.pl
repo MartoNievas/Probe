@@ -521,3 +521,23 @@ esEstrella(G) :- esConexo(G), listaDeNodos(G,[],L), member(N,L), esNodoComun(G,N
 esNodoComun([],_).
 esNodoComun([(N,_)|GS],N) :- esNodoComun(GS,N).
 esNodoComun([(_,N)|GS],N) :- esNodoComun(GS,N).
+
+%Ejercicio 23 
+
+%predicado auxiliar
+generarNnodo(0,nil).
+generarNnodo(N,bin(I,_,D)) :- N > 0,
+    K is N - 1, between(0,K,NI), ND is K - NI, generarNnodo(NI,I),generarNnodo(ND,D).
+
+%predicado princiapl 
+arbol(A) :- desde(0,N),generarNnodo(N,A).
+
+%predicado nodosEn(?A,+?)
+
+nodosEn(nil,_).
+nodosEn(bin(I,R,D),L) :- member(R,L), nodosEn(I,L),nodosEn(D,L).
+
+%predicado sinRepEn(-A,+L)
+
+sinRepEn(nil,_).
+sinRepEn(bin(I,R,D),L) :-  member(R,L), append(L1,[R|L2],L), sinRepEn(I,L1),sinRepEn(D,L2).
