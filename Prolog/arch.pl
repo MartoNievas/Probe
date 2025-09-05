@@ -426,9 +426,98 @@ P(X)
 */
 
 %Ejercicio 20 
+%ejercicio principal
+%proximoNumeroPoderoso(+X,-Y) 
+proximoNumeroPoderoso(X,Y) :- X1 is X + 1, desde(X1,Y), esNumeroPoderoso(Y),!.
+
 
 %esNumeroPoderoso(+X)
+esNumeroPoderoso(X) :-
+    \+ ( divisoresPrimosDeX(X,P),
+         P2 is P*P,
+         X mod P2 =\= 0 ).
+%esPrimo(+X)
+esPrimo(X) :- 
+    X > 1,
+    \+ (X1 is X-1, between(2,X1,D), X mod D =:= 0).
 
-esPrimo(X) :- X > 1 ,not((X1 is X -1, between(2,X1,D), X mod D =:= 0)).
+%divisoresPrimosDeX(+X,?P)
+divisoresPrimosDeX(X,P) :- 
+    between(2,X,P),
+    esPrimo(P),
+    X mod P =:= 0.
 
-esNumeroPoderoso(X) :- X1 is X - 1, between(1,X1,P),esPrimo(P),X mod P =:= 0,not((P2 is P **2, X mod P2 =:= 0)). 
+%Ejercicio 21
+
+perteneceConj(Elemento, [Elemento]).
+perteneceConj(Elemento,[_|XS]) :- pertenece(Elemento,XS).
+
+%Definir el predicado conjuntoDeNaturales(+X) debido a que el not no sirve para instancia por lo tanto falla y se cuelga 
+
+conjuntoDeNaturales(X) :- not((perteneceConj(E,X),not(natural(E)))).
+
+/*
+Indicar el error en la siguiente denición alternativa, justifcando por qué no funciona correctamente:
+conjuntoDeNaturalesMalo(X) :- not( (not(natural(E)), pertenece(E,X)) ).
+como not no sirve para instanciar una variable not(natural(E)) siempre falla por lo tanto el predicado siempre falla
+*/
+
+%Ejercicio 22 
+%Asumimos que la implementacion del grafo es un lista de aristas 
+
+%predicado caminoSimple(+G,+I,+F,-L)
+caminoSimple(G,I,F,L) :- 
+    caminoAux(G,I,F,[I],LR),
+    reverse(LR,L).
+
+%caso base
+caminoAux(_,I,I,Visitados,Visitados).
+ %caso recursivo
+ caminoAux([(I,Y)|GS],I,F,Visitados,L) :- 
+    not(member(Y,Visitados)), 
+    caminoAux(GS,Y,F,[Y|Visitados],L).
+
+caminoAux([(J,_)|GS],I,F,Visitados,L) :- 
+        J \= I, caminoAux(GS,I,F,Visitados,L).
+
+grafo1([(a,b), (b,c), (c,d)]).
+
+%caminoHalmiltoniano(+G,?L)
+
+caminoHamiltoniano(G, L) :-
+    listaDeNodos(G,[] ,LS),
+    cantNodos(G,[] ,N),
+    member(D, LS),          % nodo inicial
+    member(H, LS),          % nodo final
+    caminoSimple(G, D, H, L),
+    length(L, N).           % la longitud debe ser igual al número de nodos
+
+listaDeNodos([],_,[]).
+listaDeNodos([(X,Y)|Gs],Visitados,[X|L]) :-
+    member(Y,Visitados), not(member(X,Visitados)), listaDeNodos(Gs,[X|Visitados],L).
+listaDeNodos([(X,Y)|Gs],Visitados,[Y|L]) :- 
+    member(X,Visitados),not(member(Y,Visitados)),listaDeNodos(Gs,[Y|Visitados],L).
+listaDeNodos([(X,Y)|Gs],Visitados,[X,Y|L]) :- 
+    not(member(X,Visitados)),not(member(Y,Visitados)), listaDeNodos(Gs,[X,Y|Visitados],L).
+
+cantNodos([],_,0).
+cantNodos([(X,Y)|Gs],Visitados,N) :- 
+    member(X,Visitados), not(member(Y,Visitados)), cantNodos(Gs,[Y|Visitados],N1), N is N1 +1.
+cantNodos([(X,Y)|GS],Visitados,N) :-
+    member(Y,Visitados),not(member(X,Visitados)), cantNodos(GS,[X|Visitados],N1), N is N1 + 1.
+cantNodos([(X,Y)|GS],Visitados,N) :-
+    member(X,Visitados),member(Y,Visitados),cantNodos(GS,Visitados,N).
+cantNodos([(X,Y)|Gs],Visitados,N) :- 
+    not(member(X,Visitados)),not(member(Y,Visitados)),
+    cantNodos(Gs,[X,Y|Visitados],N1), N is N1 + 2.
+
+%esConexo()
+
+esConexo(G) :- not((listaDeNodos(G,[],L), member(I,L),member(D,L), I \= D, not(caminoSimple(G,I,D,_)))).
+
+%esEstrella 
+esEstrella(G) :- esConexo(G), listaDeNodos(G,[],L), member(N,L), esNodoComun(G,N).
+
+esNodoComun([],_).
+esNodoComun([(N,_)|GS],N) :- esNodoComun(GS,N).
+esNodoComun([(_,N)|GS],N) :- esNodoComun(GS,N).
