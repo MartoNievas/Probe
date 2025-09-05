@@ -168,8 +168,24 @@ strDelete:
 
 	ret
 
-; void strPrint(char* a, FILE* pFile)
+; void strPrint(char* a, FILE* pFile) a[rdi] y pFilep[rsi]
 strPrint:
+	push rbp
+	mov rbp,rsp
+
+	cmp rsi, 0 
+	je fin2
+
+	;cadena nula 
+	cmp rdi,0
+	je fin2
+
+	call fprintf
+
+
+	fin2:
+	pop rbp
+	mov rsp,rbp
 	ret
 
 ; uint32_t strLen(char* a) puntero por rdi
@@ -178,22 +194,21 @@ strLen:
 	push rbp
 	mov rbp,rsp
 	push r8
-	sub rsp,8
+	push rbx
 
 	cmp rdi,0
 	je .fin
 
-	mov rbx, rdi
+	mov rbx,rdi
 	xor eax,eax ;contador de chars 
-	mov r8b, [rdi]
+	mov r8b, [rbx]
 	
 	.contador:
 	cmp r8b,0
 	je .epilogo 
-	
-	inc eax 
 	inc rbx
-	mov r11b,[rdi + rbx]
+	inc eax 
+	mov r8b,[rbx]
 
 	jmp .contador
 
@@ -202,6 +217,8 @@ strLen:
 		jmp .epilogo
 
 	.epilogo:
+	pop rbx
+	pop r8
 	mov rsp,rbp
 	pop rbp
 	ret
