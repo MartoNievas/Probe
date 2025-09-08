@@ -21,7 +21,7 @@ EJERCICIO_1A_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 ; Funciones a implementar:
 ;   - indice_a_inventario
 global EJERCICIO_1B_HECHO
-EJERCICIO_1B_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
+EJERCICIO_1B_HECHO: db FALSE ; Cambiar por `TRUE` para correr los tests.
 
 ;########### ESTOS SON LOS OFFSETS Y TAMAÑO DE LOS STRUCTS
 ; Completar las definiciones (serán revisadas por ABI enforcer):
@@ -69,22 +69,22 @@ es_indice_ordenado:
 	push rbx ;desalineada
 	push r8 ;alineada
 
-	cmp rdi,0
+	cmp rdi,0 ;Aqui verifico que no sean punteros nulos 
 	je null_pointer
-	cmp rsi, 0
+	cmp rsi, 0 ;aqui verficio que no sean punteros nulos
 	je null_pointer
 
-	cmp rdx,1
+	cmp rdx,1 ;Aqui verficio el caso donde tengo 1 o 0 indices entonces ya esta ordenado
 	jle ordenada
 
 	;Ahora vamos a reccorrer el inventario con un ciclo 
 	xor r10,r10 ;int i = 0
-	mov rbx,rdi ; movemos rdi a rbx 
-	mov r8,rsi	; movemos rsi a r8
-	sub rdx,1 ;tamanio = tamanio - 1
+	mov rbx,rdi ; movemos rdi a rbx, que es el puntero base a inventario
+	mov r8,rsi	; movemos rsi a r8, que es el puntero base a indices 
+	sub rdx,1 ;tamanio = tamanio - 1, esto para ir recorriendo los indices de 2 en 2 
 	
-	ciclo: 
-	cmp r10,rdx
+	ciclo: ;ciclo para la verificacion
+	cmp r10,rdx ;aqui comparo que si i >= tamnio - 1 entonces ya termine de recorrer por lo tanto esta ordenada
 	jge ordenada ;i >= tamanio -1
 
 	movzx r12,  word[r8 + r10*2] ;indice[i]
@@ -102,18 +102,20 @@ es_indice_ordenado:
 
 	;ahora llamamos a la funcion de comparacion para eso queremos preservar los indices r10 y r11
 
-	push r10
-	sub rsp,8
+	;Con el push guardo el inidice en el que me encuentro en la pila por si la funcion
+	;comparador lo modifica 
+	push r10 ;aqui desalineo la pila 
+	sub rsp,8 ;mantengo la alineacion de la pila 
 	call rcx
-	add rsp,8
-	pop r10
+	add rsp,8 ;elimino el padding que inserte 
+	pop r10 ;restauro el valor de r10 
 
-	test rax,rax
-	jle no_ordenada
+	test rax,rax ;verficio el valor de la funcion comparador 
+	jle no_ordenada ;si es FALSE == 0 entonces no esta ordenada
 
-	; caso contrario
-	inc r10
-	jmp ciclo
+	; caso contrario continuo el ciclo
+	inc r10 ;incremento el indice i++ 
+	jmp ciclo ;salto incondicional al ciclo 
 
 
 	ordenada:
