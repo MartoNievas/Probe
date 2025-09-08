@@ -51,6 +51,10 @@ item_t **indice_a_inventario(item_t **inventario, uint16_t *indice,
     return NULL;
 
   item_t **resultado = malloc(sizeof(item_t) * tamanio);
+  // Recordar que malloc puede devolver un NULL pointer siempre verificar
+  if (resultado == NULL)
+    return NULL;
+
   for (int i = 0; i < tamanio; i++) {
     item_t *curr = inventario[indice[i]];
 
