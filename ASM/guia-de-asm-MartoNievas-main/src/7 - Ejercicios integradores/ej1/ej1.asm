@@ -27,7 +27,7 @@ EJERCICIO_1B_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 ; Completar las definiciones (serán revisadas por ABI enforcer):
 ITEM_NOMBRE EQU 0
 ITEM_FUERZA EQU 20
-ITEM_DURABILIDAD EQU 26
+ITEM_DURABILIDAD EQU 24
 ITEM_SIZE EQU 28
 
 ;; La funcion debe verificar si una vista del inventario está correctamente 
