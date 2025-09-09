@@ -21,7 +21,7 @@ EJERCICIO_1A_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 ; Funciones a implementar:
 ;   - indice_a_inventario
 global EJERCICIO_1B_HECHO
-EJERCICIO_1B_HECHO: db FALSE ; Cambiar por `TRUE` para correr los tests.
+EJERCICIO_1B_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 
 ;########### ESTOS SON LOS OFFSETS Y TAMAÑO DE LOS STRUCTS
 ; Completar las definiciones (serán revisadas por ABI enforcer):
@@ -86,16 +86,16 @@ es_indice_ordenado:
 	mov r13, rdx ;guardamos el tamanio 
 	mov r14, rcx ;el puntero a la funcion de comparacion 
 
-	dec r13 ;ajustamos el tamanio = tamanio - 1
+	sub r13,1 ;ajustamos el tamanio = tamanio - 1
 	xor r15,r15 ;int i = 0;
 	
-	ciclo
+	ciclo:
 	cmp r15,r13
 	jge ordenada ;i >= tamanio - 1 entonces recorrimos toda la lista y esta ordenana 
 
 	;buscamos los indices 
-	movzx rdi, word [r12 + r15*8] ;rdi = indices[i]
-	movzx rsi, word [r12 + r15*8 + 2] ; rsi = indices[i+1]
+	movzx rdi, word [r12 + r15*2] ;rdi = indices[i]
+	movzx rsi, word [r12 + r15*2 + 2] ; rsi = indices[i+1]
 
 	;ahora buscamos los punteros de los items 
 	mov rdi,[rbx + rdi*8]
@@ -157,13 +157,67 @@ es_indice_ordenado:
 ;;   `ítems`. Se pide *copiar* estos punteros, **no se deben crear ni clonar
 ;;   ítems**
 
+; r/m64 = item_t**  rdi <- inventario puntero
+	; r/m64 = uint16_t* rsi <- indice puntero 
+	; r/m16 = uint16_t  rdx <- tamanio unsigned int de 16 bits (2 bytes)
+
 global indice_a_inventario
 indice_a_inventario:
-	; Te recomendamos llenar una tablita acá con cada parámetro y su
-	; ubicación según la convención de llamada. Prestá atención a qué
-	; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
-	;
-	; r/m64 = item_t**  inventario
-	; r/m64 = uint16_t* indice
-	; r/m16 = uint16_t  tamanio
+		push rbp ;alineamos la pila
+	mov rbp,rsp ;Movemos rsp al base pointer 
+	push rbx ;desalineada 
+	push r12 ;alineada 
+	push r13 ;desalineada
+	push r14 ;alineada 
+
+
+	;verificamos que los punteros no sean nulos 
+	;si alguno es nulo devolvemos el puntero nulo
+	cmp rdi, 0 ;verificamos que el puntero inventario no sea null 
+	je null_pointer 
+	cmp rsi,0
+	je null_pointer
+
+	;caso contario 
+	;movemos los datos de entrada a registros no volatiles 
+	mov rbx,rdi ;puntero a inventario 
+	mov r12,rsi ;puntero a los indices 
+	mov r13,rdx ;tamanio 
+
+	xor r14,r14 ;int i = 0; 
+	;ahora tenemos que pedir la memoria con malloc, para eso debemos pasarle sizeof(item_t) * tamanio 
+	mov rdi,r13 ;pasamos el tamanio a rdi 
+	imul rdi,28 ;multiplicamos por el itemsize 
+
+	call malloc ;llamamos a malloc 
+
+	;verificamos que el puntero no sea nulo 
+	cmp rax, 0 
+	je epilogo1
+
+	;caso contrario copiamos la vista del inventario 
+	ciclo1:
+		cmp r14,r13 ;si i >= tamanio ya recorrimos los indices 
+		jge epilogo1
+
+		;ahora busamos el inidice 
+		movzx rdi, word [r12 + r14*2] ;indices[i]
+
+		mov rdi, [rbx + rdi*8] ;inventario[indice[i]]
+
+		mov [rax + r14*8], rdi ;guardamos el puntero en memoria 
+
+		inc r14
+		jmp ciclo1
+
+	null_pointer:
+		xor rax,rax 
+
+	epilogo1:
+	pop r14 
+	pop r13
+	pop r12 
+	pop rbx
+	mov rsp,rbp
+	pop rbp
 	ret
