@@ -60,84 +60,81 @@ ITEM_SIZE EQU 28
 
 global es_indice_ordenado
 es_indice_ordenado:
-	push rbp ;alineada
-	mov rbp,rsp
-	push rdi ;desalineada
-	push rsi ;alineada
-	push rdx ;desalineada
-	push rcx ;alineada
-	push rbx ;desalineada
-	push r8 ;alineada
+	push rbp ;stack alineado
+	mov rbp,rsp ;ponemos el base poiner apuntando a la pila 
+	push rbx ;desalineada 
+	push r12 ;alineada 
+	push r13 ;desalineada
+	push r14 ;alineada 
+	push r15 ;desalineda 
+	sub rsp,8 ;alineada 
 
-	cmp rdi,0 ;Aqui verifico que no sean punteros nulos 
-	je null_pointer
-	cmp rsi, 0 ;aqui verficio que no sean punteros nulos
-	je null_pointer
+	;verificamos que los punteros no sean nulos 
+	cmp rdi,0
+	je no_ordenada
+	cmp rsi,0
+	je no_ordenada
+	cmp rcx,0
+	je no_ordenada
 
-	cmp rdx,1 ;Aqui verficio el caso donde tengo 1 o 0 indices entonces ya esta ordenado
-	jle ordenada
+	cmp rdx, 1
+	jle ordenada ; si tamanio <= 1 esta ordeanada 
 
-	;Ahora vamos a reccorrer el inventario con un ciclo 
-	xor r10,r10 ;int i = 0
-	mov rbx,rdi ; movemos rdi a rbx, que es el puntero base a inventario
-	mov r8,rsi	; movemos rsi a r8, que es el puntero base a indices 
-	sub rdx,1 ;tamanio = tamanio - 1, esto para ir recorriendo los indices de 2 en 2 
+	;ahora movemos los datos a los registros no volatiles 
+	mov rbx,rdi ;movemos el puntero de inventario a rbx
+	mov r12,rsi ;guardamos el puntero a los indices 
+	mov r13, rdx ;guardamos el tamanio 
+	mov r14, rcx ;el puntero a la funcion de comparacion 
+
+	dec r13 ;ajustamos el tamanio = tamanio - 1
+	xor r15,r15 ;int i = 0;
 	
-	ciclo: ;ciclo para la verificacion
-	cmp r10,rdx ;aqui comparo que si i >= tamnio - 1 entonces ya termine de recorrer por lo tanto esta ordenada
-	jge ordenada ;i >= tamanio -1
+	ciclo
+	cmp r15,r13
+	jge ordenada ;i >= tamanio - 1 entonces recorrimos toda la lista y esta ordenana 
 
-	movzx r12,  word[r8 + r10*2] ;indice[i]
+	;buscamos los indices 
+	movzx rdi, word [r12 + r15*8] ;rdi = indices[i]
+	movzx rsi, word [r12 + r15*8 + 2] ; rsi = indices[i+1]
 
-	movzx r13, 	word [r8 + r10*2 + 2] ;indice[i+1]
+	;ahora buscamos los punteros de los items 
+	mov rdi,[rbx + rdi*8]
+	mov rsi,[rbx + rsi*8]
 
+	;verificamos que no sean nulos
+	cmp rdi,0
+	je no_ordenada
+	cmp rsi,0
+	je no_ordenada
 
-	mov rdi, [rbx + r12*8] ;inventario[indice[i]]
-	mov rsi, [rbx + r13*8] ;inventario[indice[i+1]]
+	;ahora llamamos a la funcion de comparacion que tiene los parametros en rdi y rsi respectivamente 
+	call r14 
+	;ahora tenemos el resultado en rax 
+	cmp rax,FALSE ;significa que ese par no esta ordenado, por lo tanto la vista entera no lo esta 
+	je no_ordenada ;saltamos a no ordenada 
 
-	test rdi,rdi ;comparamos que no sean punteros nulos 
-	jz null_pointer
-	test rsi,rsi
-	jz null_pointer
-
-	;ahora llamamos a la funcion de comparacion para eso queremos preservar los indices r10 y r11
-
-	;Con el push guardo el inidice en el que me encuentro en la pila por si la funcion
-	;comparador lo modifica 
-	push r10 ;aqui desalineo la pila 
-	sub rsp,8 ;mantengo la alineacion de la pila 
-	call rcx
-	add rsp,8 ;elimino el padding que inserte 
-	pop r10 ;restauro el valor de r10 
-
-	test rax,rax ;verficio el valor de la funcion comparador 
-	jle no_ordenada ;si es FALSE == 0 entonces no esta ordenada
-
-	; caso contrario continuo el ciclo
-	inc r10 ;incremento el indice i++ 
-	jmp ciclo ;salto incondicional al ciclo 
+	;caso contrario 
+	inc r15
+	jmp ciclo
 
 
 	ordenada:
-	mov rax,TRUE
-	jmp epilogo
+		mov rax, TRUE
+		jmp epilogo
 
-	no_ordenada:
-	mov rax,FALSE
-	jmp epilogo
-
-	null_pointer: 
-	mov rax,FALSE
-
-	epilogo:
-		pop r8
-		pop rbx 
-		pop rcx 
-		pop rdx 
-		pop rsi
-		pop rdi
-		mov rsp,rbp
-		pop rbp
+	no_ordenada: 
+		mov rax,FALSE
+	
+	
+	epilogo: 
+	add rsp,8
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rbx
+	mov rsp,rbp 
+	pop rbp
 		ret
 
 ;; Dado un inventario y una vista, crear un nuevo inventario que mantenga el
