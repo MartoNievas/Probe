@@ -39,8 +39,8 @@ void optimizar(mapa_t mapa, attackunit_t *compartida,
     return;
   }
 
-  for (int i = 0; i < 256; i++) {
-    for (int j = 0; j < 256; j++) {
+  for (int i = 0; i < 255; i++) {
+    for (int j = 0; j < 255; j++) {
       if (mapa[i][j] != NULL &&
           (*fun_hash)(mapa[i][j]) == (*fun_hash)(compartida) &&
           compartida != mapa[i][j]) {
@@ -68,11 +68,11 @@ uint32_t contarCombustibleAsignado(mapa_t mapa,
 
   uint32_t res = 0;
 
-  for (int i = 0; i < 256; i++) {
-    for (int j = 0; j < 256; j++) {
+  for (int i = 0; i < 255; i++) {
+    for (int j = 0; j < 255; j++) {
       if (mapa[i][j] != NULL) {
         res += mapa[i][j]->combustible;
-        res -= (*fun_combustible)(mapa[i][j]->clase);
+        res -= (*fun_combustible)((char *)mapa[i][j]->clase);
       }
     }
   }
