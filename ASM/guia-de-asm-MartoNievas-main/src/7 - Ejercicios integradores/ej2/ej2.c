@@ -27,7 +27,7 @@ bool EJERCICIO_2B_HECHO = true;
  * Funciones a implementar:
  *   - modificarUnidad
  */
-bool EJERCICIO_2C_HECHO = false;
+bool EJERCICIO_2C_HECHO = true;
 
 /**
  * OPCIONAL: implementar en C
@@ -83,4 +83,32 @@ uint32_t contarCombustibleAsignado(mapa_t mapa,
  * OPCIONAL: implementar en C
  */
 void modificarUnidad(mapa_t mapa, uint8_t x, uint8_t y,
-                     void (*fun_modificar)(attackunit_t *)) {}
+                     void (*fun_modificar)(attackunit_t *)) {
+  if ((x >= 255 || y >= 255) || mapa == NULL || fun_modificar == NULL) {
+    return;
+  }
+
+  attackunit_t *modifer = mapa[x][y];
+  if (modifer == NULL) {
+    return; // si no hay nada, no hago nada
+  }
+
+  // caso en el que esta optimizado, creamos un nueva unidad con el mismo
+  // nombre, con una sola referencia y con el mismo combustible
+  if (modifer->references > 1) {
+    attackunit_t *new = malloc(sizeof(attackunit_t));
+    modifer->references--;
+    if (new == NULL) {
+      return;
+    }
+
+    strncpy(new->clase, modifer->clase, 11);
+    new->references = 1;
+    new->combustible = modifer->combustible;
+    (*fun_modificar)(new);
+    mapa[x][y] = new;
+  } else {
+    // caso contrario solo modificamos la ya existente
+    (*fun_modificar)(modifer);
+  }
+}
