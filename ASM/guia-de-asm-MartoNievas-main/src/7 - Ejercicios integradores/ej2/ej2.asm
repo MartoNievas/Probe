@@ -67,7 +67,7 @@ optimizar:
 	;vamos a guardar el hash de compartido para tenerlo a mano 
 	mov rdi,rsi
 	call r13 
-	mov rcx, r13 ;ahora en rcx tenemos el hash de compartida 
+	mov rcx, rax ;ahora en rcx tenemos el hash de compartida 
 
 	xor r14,r14 ;int i = 0
 
