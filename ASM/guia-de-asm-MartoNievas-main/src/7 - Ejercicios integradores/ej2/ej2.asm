@@ -1,5 +1,6 @@
 extern malloc
 extern free 
+extern srtncpy
 section .rodata
 ; Acá se pueden poner todas las máscaras y datos que necesiten para el ejercicio
 
@@ -28,7 +29,7 @@ EJERCICIO_2B_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 ; Funciones a implementar:
 ;   - modificarUnidad
 global EJERCICIO_2C_HECHO
-EJERCICIO_2C_HECHO: db FALSE ; Cambiar por `TRUE` para correr los tests.
+EJERCICIO_2C_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 
 ;########### ESTOS SON LOS OFFSETS Y TAMAÑO DE LOS STRUCTS
 ; Completar las definiciones (serán revisadas por ABI enforcer):
@@ -230,10 +231,103 @@ contarCombustibleAsignado:
 			pop rbp
 			ret
 
+; r/m64 = mapa_t           rdi <- mapa 
+	; r/m8  = uint8_t      rsi <- x
+	; r/m8  = uint8_t      rdx <- y
+	; r/m64 = void*        rcx <- fun_modificar(attackunit_t*)
 global modificarUnidad
 modificarUnidad:
-	; r/m64 = mapa_t           mapa
-	; r/m8  = uint8_t          x
-	; r/m8  = uint8_t          y
-	; r/m64 = void*            fun_modificar(attackunit_t*)
+	push rbp 
+	mov rbp,rsp 
+	push rbx 
+	push r12 
+	push r13 
+	push r14
+	push r15
+	sub rsp,8
+	;stack alineado 
+
+	;verifiquemos que los punteros no son nulos y los indices son validos 
+	cmp rdi,0
+	je .epilogo
+	cmp rcx,0
+	je .epilogo
+	cmp rsi,255 
+	jge .epilogo
+	cmp rdx, 255
+	jge .epilogo 
+	;guardamos el puntero a mapa y el puntero a la funcion en un registro no volatil 
+	mov rbx,rdi 
+	mov r15,rcx
+	
+
+	;caso contrario busamos mapa[x][y]
+
+	;primero numero de fila 
+	mov r12,rsi
+	shl r12,8 ; r12 = 256*x 
+	sub r12,rsi; r12 = 255*x
+
+	;sumamos el numero de columna 
+	add r12,rdx; r12 = 255*x + y 
+
+	mov r13, [rbx + r12*8]; r13 = mapa[x][y] = modifier 
+
+	;verificamos que el puntero no sea nulo 
+	cmp r13,0
+	je .epilogo 
+
+	;caso contrario, vamos con la modificacion 
+	;primer caso si hay mas de una referencia 
+	mov rdi, [r13 + ATTACKUNIT_REFERENCES]
+	cmp rdi, 1 ;si tiene mas de una referencia creamos una nueva unidad pidiendo memoria 
+	jg .nueva_unidad  
+
+	;caso contrario modificamos la que ya existe 
+	mov rdi,r13 ; rdi = mapa[x][y]
+	jmp .modificarUnidad
+
+	.nueva_unidad: 
+		;ahora debemos copiar todos los atributos de modifier y pedir memoria 
+		mov rdi, ATTACKUNIT_SIZE
+		call malloc ; tenemos el puntero en rax 
+
+		cmp rax,0 
+		je .epilogo ;si el puntero es nulo saltamos al epilogo 
+
+		.copiarUnidad:
+		;caso contrario copiamos los datos 
+		mov [rax + ATTACKUNIT_REFERENCES], byte 1 ; copiamos las referencias 
+		
+		;copaimos el combustible 
+		mov r10w, word [r13 + ATTACKUNIT_COMBUSTIBLE]
+		mov word [rax + ATTACKUNIT_COMBUSTIBLE], r10w
+		;ahora debemos copiar el nombre de la clase  
+
+		mov r10, [r13 + ATTACKUNIT_CLASE] ;primeros 8 bytes de clase 
+		mov [rax + ATTACKUNIT_CLASE], r10
+		mov r10d, [r13 + ATTACKUNIT_CLASE + 8]
+		mov [rax + ATTACKUNIT_CLASE + 8],r10d
+
+		.remplazarUnidad: 
+			mov [rbx + r12*8], rax ;remplazamos la unidas por la copia con una sola referencia
+
+		.disminuirReferenciasDeLaOriginal: 
+			mov r10b, byte [r13 + ATTACKUNIT_REFERENCES]
+			dec r10b
+			mov byte [r13 + ATTACKUNIT_REFERENCES],r10b
+
+			mov rdi,rax
+		.modificarUnidad: 
+			call r15
+		
+		.epilogo: 
+			add rsp,8 
+			pop r15
+			pop r14
+			pop r13
+			pop r12
+			pop rbx 
+			mov rsp,rbp 
+			pop rbp
 	ret
