@@ -21,7 +21,7 @@ EJERCICIO_2A_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 ; Funciones a implementar:
 ;   - contarCombustibleAsignado
 global EJERCICIO_2B_HECHO
-EJERCICIO_2B_HECHO: db FALSE ; Cambiar por `TRUE` para correr los tests.
+EJERCICIO_2B_HECHO: db TRUE ; Cambiar por `TRUE` para correr los tests.
 
 ; Marca el ejercicio 1C como hecho (`true`) o pendiente (`false`).
 ;
@@ -146,11 +146,89 @@ optimizar:
 	pop rbp
 	ret
 
+; r/m64 = mapa_t           mapa -> rdi
+	; r/m64 = uint16_t*        fun_combustible(char*) -> rsi
 global contarCombustibleAsignado
 contarCombustibleAsignado:
-	; r/m64 = mapa_t           mapa
-	; r/m64 = uint16_t*        fun_combustible(char*)
-	ret
+	push rbp ;alineado
+	mov rbp,rsp 
+	push rbx ;desalineada
+	push r12 ;alineada
+	push r13 ;desalineada
+	push r14 ;alineada 
+	push r15 ;desalineada
+	sub rsp,8 ;alineada 
+
+	;inicializamo res = -1 por si es null pointer algun parametro 
+	mov rax,-1
+
+	;veamos que los punteros no son nulos 
+	cmp rdi,0 
+	je .epilogo ; si lo son retorno -1 codigo de error 
+	cmp rsi,0
+	je .epilogo
+
+	;caso contrario movemos los argumentos a los registros no volatiles 
+	mov rbx,rdi ;pasamos el puntero al mapa a rbx
+	mov r12,rsi ;pasamos el puntero a la funcion a r12 
+
+	xor r13,r13 ;res = 0; 
+	xor r14,r14 ;int i = 0 ;
+	
+	.ciclo_fila1: 
+		xor r15,r15 ; int j = 0; 
+		.ciclo_columna1: 
+
+			mov r10,r14
+			shl r10,8 ;r10 = i*256
+			sub r10,r14 ;r10 = i*255
+			add r10,r15 ;r10 = i*255 + j 
+			
+			;ahora busquemos el puntero de la unidad de atque 
+			mov rdi,[rbx + r10*8] ;rdi = mapa[i][j]
+
+			;verifiquemos que no es un puntero nulo 
+			cmp rdi,0 ; si es nulo vamos con el siguiente
+			je .siguiente
+
+			;caso contrario 
+			movzx eax, word [rdi + ATTACKUNIT_COMBUSTIBLE]
+			add r13d, eax ;en r13w ponemos el res parcial 
+
+			;ahora debemos restar el combustible base, para eso llamamos a la funcion fun_combustible, la cual toma como parametro
+			;el nombre de la clase 
+
+			;siempre que una funcion toma como parametro un puntero, y tenemos un tipo de dato que no es un puntero 
+			;usamos lea para obtener la direccion de ese tipo Load Effective Address (lea)
+			lea rdi,[rdi + ATTACKUNIT_CLASE];pasamo como parametro el nombre de la clase 
+			call r12 ;resultado en rax 
+			
+			;restamos el combustible base
+			sub r13d,eax 
+
+			.siguiente:
+				inc r15 ;j++
+				cmp r15,255 
+				jl .ciclo_columna1 ; i < 255 
+
+				inc r14 ;i++
+				cmp r14,255 
+				jl .ciclo_fila1  ; j<255
+
+				mov eax,r13d ;pasamos el res parcial a rax 
+
+
+				;caso contrario termino
+			.epilogo:
+			add rsp,8 
+			pop r15
+			pop r14
+			pop r13
+			pop r12
+			pop rbx 
+			mov rsp,rbp 
+			pop rbp
+			ret
 
 global modificarUnidad
 modificarUnidad:
