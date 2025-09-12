@@ -41,13 +41,11 @@ segmentacion_t *segmentar_casos(caso_t *arreglo_casos, int largo) {
 
   int i0 = 0, i1 = 0, i2 = 0;
   for (int i = 0; i < largo; i++) {
-    if (arreglo_casos[i].usuario->nivel == 0 && res->casos_nivel_0 != NULL) {
+    if (arreglo_casos[i].usuario->nivel == 0) {
       res->casos_nivel_0[i0++] = arreglo_casos[i];
-    } else if (arreglo_casos[i].usuario->nivel == 1 &&
-               res->casos_nivel_1 != NULL) {
+    } else if (arreglo_casos[i].usuario->nivel == 1) {
       res->casos_nivel_1[i1++] = arreglo_casos[i];
-    } else if (arreglo_casos[i].usuario->nivel == 2 &&
-               res->casos_nivel_2 != NULL) {
+    } else if (arreglo_casos[i].usuario->nivel == 2) {
       res->casos_nivel_2[i2++] = arreglo_casos[i];
     }
   }
