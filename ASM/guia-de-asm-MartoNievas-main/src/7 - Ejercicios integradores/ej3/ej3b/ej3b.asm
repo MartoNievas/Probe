@@ -1,8 +1,8 @@
 ;########### SECCION DE DATOS
 extern strncmp
 section .data
-cadena_clt db "CLT"    ; Sin null terminator!
-cadena_rbo db "RBO"    ; Sin null terminator!
+cadena_clt db "CLT", 0    ; Con null terminator
+cadena_rbo db "RBO", 0    ; Con null terminator
 ;########### SECCION DE TEXTO (PROGRAMA)
 section .text
 
@@ -71,7 +71,7 @@ resolver_automaticamente:
     imul r9,CASO_SIZE
     mov rdi,[r15 + r9] ;en rdi = arreglos_casos[i]
     mov rsi,[r15 + r9 + CASO_USUARIO_OFFSET]
-    mov esi, [rsi + USUARIO_NIVEL_OFFSET]
+    mov rsi, [rsi + USUARIO_NIVEL_OFFSET]
 
     .verficacion_de_nivel: 
 
@@ -120,7 +120,7 @@ resolver_automaticamente:
 
     lea rdi,[r15 + r9 + CASO_CATEGORIA_OFFSET]
     lea rsi, cadena_rbo
-    mov rdx,3
+    mov rdx,4
     call strncmp
     mov rcx,[rbp-48]
     pop r9
@@ -139,7 +139,7 @@ resolver_automaticamente:
 
     lea rdi, [r15 + r9 + CASO_CATEGORIA_OFFSET]
     lea rsi,cadena_clt
-    mov rdx,3
+    mov rdx,4
     call strncmp
     mov rcx,[rbp - 48]
     pop r9

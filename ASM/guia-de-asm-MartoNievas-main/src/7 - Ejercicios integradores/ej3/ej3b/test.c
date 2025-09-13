@@ -544,12 +544,12 @@ TEST(ej2_resolver_automaticamente) {
 
   // Test 9: Casos con categorías edge cases
   caso_t casos_test9[6] = {
-      crear_caso(2, 1, "CLT", 1), // CLT exacto
-      crear_caso(2, 1, "RBO", 2), // RBO exacto
-      crear_caso(2, 1, "clt", 3), // CLT en minúsculas (no debe coincidir)
-      crear_caso(2, 1, "rbo", 4), // RBO en minúsculas (no debe coincidir)
-      crear_caso(2, 1, "CLX", 5), // CLT con caracteres extra
-      crear_caso(2, 1, "RBOY", 6) // RBO con caracteres extra
+      crear_caso(2, 1, "CLT", 1),  // CLT exacto
+      crear_caso(2, 1, "RBO", 2),  // RBO exacto
+      crear_caso(2, 1, "clt", 3),  // CLT en minúsculas (no debe coincidir)
+      crear_caso(2, 1, "rbo", 4),  // RBO en minúsculas (no debe coincidir)
+      crear_caso(2, 1, "CLTX", 5), // CLT con caracteres extra
+      crear_caso(2, 1, "RBOY", 6)  // RBO con caracteres extra
   };
 
   caso_t casos_a_revisar9[6];
