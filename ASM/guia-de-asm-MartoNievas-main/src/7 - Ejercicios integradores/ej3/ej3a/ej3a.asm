@@ -33,67 +33,71 @@ ESTADISTICAS_SIZE EQU 7
 
 ;int contar_casos_por_nivel(caso_t* arreglo_casos[rdi], int largo [rsi], int nivel[rdx])
 contar_casos_por_nivel: 
-    push rbp ;pila alineda 
-    mov rbp,rsp 
+    push rbp
+    mov rbp, rsp 
     push rbx
     push r12
     push r13
     push r14
 
-    ;inicializamos res en -1 
-    mov rax,-1
-    cmp rdi,0 ;si el puntero al arreglo es nulo, saltamos al epilogo y retornamos -1 
+    ; Verificar si el arreglo es NULL
+    mov rax, -1
+    cmp rdi, 0
     je epilogo
 
-    ;si es 0 no entro en el ciclo
-    xor rax,rax ;res = 0;
-    
-    mov rbx,rdi
-    xor r12,r12 ;int i = 0;
-    ;caso contrario 
-    ciclo: 
+    ; Inicializar contador
+    xor rax, rax        ; res = 0
+    mov rbx, rdi        ; rbx = arreglo (de estructuras)
+    xor r12, r12        ; i = 0
 
-    cmp r12,rsi
+ciclo:
+    cmp r12, rsi        ; comparar i con tamaño del arreglo
     jge epilogo
 
-    mov r14,r12
-    imul r14,CASO_SIZE
-    mov r13,[rbx + r14 + USUARIO_ID_OFFSET]
-    mov r13,[r13 + USUARIO_NIVEL_OFFSET] 
-
-    cmp r13,rdx 
-    jne no_iguales ;si no son iguales no aumento el contador
-
-    ;caso contrario si lo hago 
-    inc rax ;res++
-    inc r12 ;i ++ 
-    jmp ciclo
-
-    no_iguales:
-    inc r12 
-    jmp ciclo
+    ; Calcular dirección de la estructura caso_t i
+    mov r14, r12
+    imul r14, CASO_SIZE  ; r14 = i * sizeof(caso_t)
     
+    ; ⚠️ VERIFICACIÓN: ¿El usuario de este caso es NULL?
+    mov r13, [rbx + r14 + CASO_USUARIO_OFFSET]  ; Acceso directo al campo usuario
+    cmp r13, 0
+    je siguiente        ; Si usuario es NULL, saltar
+    
+    ; Obtener nivel del usuario
+    mov r13d, [r13 + USUARIO_NIVEL_OFFSET]  ; USUARIO_NIVEL_OFFSET = 4
+    
+    ; Comparar con el nivel buscado
+    cmp r13d, edx
+    jne siguiente
+    
+    ; Nivel coincide, incrementar contador
+    inc rax
+
+siguiente:
+    inc r12
+    jmp ciclo
 
 epilogo:
-pop r14
-pop r13
-pop r12
-pop rbx
-mov rsp,rbp 
-pop rbp
-ret
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    mov rsp, rbp 
+    pop rbp
+    ret
 
 ;segmentacion_t* segmentar_casos(caso_t* arreglo_casos, int largo)
 global segmentar_casos
 segmentar_casos:
 push rbp
 mov rbp,rsp
+sub rsp,8
+mov [rbp-8],rsi
 push rbx
 push r15 
 push r14 
 push r13 
 push r12 
-sub rsp,8
 ;guardamos la longitud en la pila porque la vamos a nesecitar 
 ;stack frame y stack alineado 
 
@@ -111,16 +115,19 @@ call malloc
 
 ;verficamos que no sea nulo el puntero 
 cmp rax,0
-je epilogo
+je .epilogo
 
 mov r15,rax 
 
 .conteo_de_casos_creacion_de_arreglos: 
 .caso_nivel0:
-mov rdx,0 
+mov rdi,rbx
+mov rsi,[rbp-8]
+xor rdx,rdx 
 call contar_casos_por_nivel
 cmp rax,0
 je .nivel0_es_cero
+
 imul rax,CASO_SIZE
 mov rdi,rax 
 call malloc
@@ -128,19 +135,22 @@ mov r12,rax ;aca guardamos el puntero al arreglo casos_nivel0
 
 ;vamos con el segundo arreglo 
 .casos_nivel1:
-inc rdx 
 mov rdi,rbx ;buscamos en el registro la base del arreglo 
+mov rsi,[rbp-8]
+mov rdx,1
 call contar_casos_por_nivel
 cmp rax,0
 je .nivel1_es_cero
+
 imul rax,CASO_SIZE
 mov rdi,rax 
 call malloc ;aca guardamos casos_nivel1
 mov r13,rax
 ;camos con el tercer arreglo
 .casos_nivel2:
-inc rdx
 mov rdi,rbx;buscamos el puntero al arreglo en rbx
+mov rsi,[rbp-8] ;pasamos el largo del arreglo 
+mov rdx,2
 call contar_casos_por_nivel
 cmp rax,0
 je .nivel2_es_cero
@@ -174,11 +184,11 @@ xor r14,r14
 
 ;ahora tenemos que ir copiando los casos 
 .pre_ciclo:
+mov rsi,[rbp-8]
 xor r10,r10 ;i = 0
-xor rdi,rdi ;i0 = 0
+xor rdi,rdi ;i0 = 00 
 xor rdx,rdx ;i1 = 0
 xor rcx,rcx ;i2 = 0
-
 ;ahora ponemos los casos en donde corresponeden 
 
 .ciclo_asignacion_de_casos: 
@@ -188,9 +198,11 @@ jge .fin_ciclo
 mov r9,r10
 imul r9,CASO_SIZE
 
-mov r11,[rbx + r9] ;en r11 = arreglo_casos[i]
-mov r8, [r11  + CASO_USUARIO_OFFSET] ;r8 = arreglo_casos[i].usuario
-mov r8d, dword [r8 + USUARIO_NIVEL_OFFSET] ;r8 = arreglo_casos[i].ususario->nivel
+mov r11,[rbx + r9 + CASO_USUARIO_OFFSET] ;en r11 = arreglo_casos[i]
+cmp r11,0
+je .next
+
+mov r8d, dword [r11 + USUARIO_NIVEL_OFFSET] ;r8 = arreglo_casos[i].ususario->nivel
 
 cmp r8d,0
 je .es_nivel0
@@ -208,14 +220,6 @@ je .es_nivel1
     inc r10 ;i++
     jmp .ciclo_asignacion_de_casos
 
-.es_nivel0:
-    mov r9,rdi
-    imul r9,CASO_SIZE
-    mov [r12 + r9],r11
-    inc rdi ;i0++
-    inc r10 ;i++
-    jmp .ciclo_asignacion_de_casos
-
 .es_nivel1: 
     mov r9,rdx
     imul r9,CASO_SIZE
@@ -224,6 +228,17 @@ je .es_nivel1
     inc r10 ;i++
     jmp .ciclo_asignacion_de_casos
 
+.es_nivel0:
+    mov r9,rdi
+    imul r9,CASO_SIZE
+    mov [r12 + r9],r11
+    inc rdi ;i0++
+    inc r10 ;i++
+    jmp .ciclo_asignacion_de_casos
+
+.next:
+inc r10
+jmp .ciclo_asignacion_de_casos
 
 
 
@@ -237,12 +252,12 @@ mov [r15 + SEGMENTACION_CASOS2_OFFSET], r14
 mov rax,r15
 
 .epilogo:
-add rsp,8
 pop r12 
 pop r13 
 pop r14 
 pop r15 
 pop rbx
+add rsp,8
 mov rsp,rbp
 pop rbp
 ret
