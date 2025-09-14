@@ -39,7 +39,7 @@ bool EJERCICIO_3_HECHO = true;
  */
 bool hay_accion_que_toque(accion_t *accion, char *nombre)
 {
-	if (accion == NULL)
+	if (accion == NULL || nombre == NULL)
 		return false;
 
 	accion_t *curr = accion;

@@ -44,7 +44,7 @@ section .rodata
 ; Funciones a implementar:
 ;   - hay_accion_que_toque
 global EJERCICIO_1_HECHO
-EJERCICIO_1_HECHO: db FALSE
+EJERCICIO_1_HECHO: db TRUE
 
 ; Marca el ejercicio 2 como hecho (`true`) o pendiente (`false`).
 ;
@@ -75,14 +75,60 @@ section .text
 ; bool hay_accion_que_toque(accion_t* accion, char* nombre);
 ; ```
 global hay_accion_que_toque
-hay_accion_que_toque:
-	; Te recomendamos llenar una tablita acá con cada parámetro y su
+; Te recomendamos llenar una tablita acá con cada parámetro y su
 	; ubicación según la convención de llamada. Prestá atención a qué
 	; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
 	;
-	; r/m64 = accion_t*  accion
-	; r/m64 = char*      nombre
-	xor rax, rax
+	; r/m64 = accion_t*  accion [rdi]
+	; r/m64 = char*      nombre [rsi]
+hay_accion_que_toque:
+	push rbp 
+	mov rbp,rsp 
+	push rbx 
+	push r15 
+	push r14
+	push r13 
+	push r12 
+	sub rsp,8
+
+	xor rax,rax ;seteamos el valor de res en false 
+	;verficamos que ningun puntero sea null
+	cmp rsi,0
+	je .epilogo
+	cmp rdi,0
+	je .epilogo
+
+	;caso contario 
+	mov rbx, rdi 
+	mov r15, rsi 
+	.ciclo: 
+	cmp rbx,0 
+	je .epilogo
+	;caso contrario verificamos 
+
+	mov r14,[rbx + accion.destino]
+	lea rdi, [r14 + carta.nombre]
+	mov rsi,r15
+	call strcmp 
+	cmp rax,0 
+	jne .next 
+
+	mov rax,1
+	jmp .epilogo
+
+	.next: 
+	mov rbx,[rbx + accion.siguiente] ;curr = curr->siguiente
+	jmp .ciclo
+
+	.epilogo:
+	add rsp,8
+	pop r12 
+	pop r13 
+	pop r14
+	pop r15 
+	pop rbx
+	mov rsp,rbp 
+	pop rbp 
 	ret
 
 ; Invoca las acciones que fueron encoladas en la secuencia proporcionada en el
