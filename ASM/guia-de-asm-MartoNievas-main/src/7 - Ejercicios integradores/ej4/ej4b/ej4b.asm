@@ -47,7 +47,8 @@ invocar_habilidad:
 
 	;caso contrario iteramos sobre el directorio
 	;tenemos que buscar el nombre de la habilidad 
-	lea rdi,[r14 + r12*8 + DIRENTRY_NAME_OFFSET]; aqui tenemos el nombre de la habilidad 
+	mov rax,[r14 + r12*8]; aqui tenemos el nombre de la habilidad
+	lea rdi, [rax + DIRENTRY_NAME_OFFSET] 
 	mov rsi, r15 ;aqui tenemos con el que queremos comparar
 	call strcmp ; en rax tenemos el res 
 
