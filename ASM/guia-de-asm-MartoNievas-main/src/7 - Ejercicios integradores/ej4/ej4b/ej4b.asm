@@ -59,8 +59,10 @@ invocar_habilidad:
 	jmp .ciclo
 
 	.usar_habilidad: 
-	mov rdi, [rbx + r12*8] ;tenemos dir[i]
-	call [rbx +  FANTASTRUCO_DIR_OFFSET + r12*8  + DIRENTRY_PTR_OFFSET]
+	mov rdi, rbx ;tenemos dir[i]
+	mov r10,[r14 + r12*8]
+	mov r10, [r10 + DIRENTRY_PTR_OFFSET]
+	call r10
 	jmp .epilogo
 
 	.arquetipo:
