@@ -37,7 +37,20 @@ bool EJERCICIO_3_HECHO = true;
  *   - El valor `0` es `false`
  *   - Cualquier otro valor es `true`
  */
-bool hay_accion_que_toque(accion_t* accion, char* nombre) {
+bool hay_accion_que_toque(accion_t *accion, char *nombre)
+{
+	if (accion == NULL)
+		return false;
+
+	accion_t *curr = accion;
+	while (curr != NULL)
+	{
+		if (strcmp(curr->destino->nombre, nombre) == 0)
+		{
+			return true;
+		}
+		curr = curr->siguiente;
+	}
 	return false;
 }
 
@@ -62,7 +75,28 @@ bool hay_accion_que_toque(accion_t* accion, char* nombre) {
  * la primera acción, segundo la segunda acción, etc). Las acciones asumen este
  * orden de ejecución.
  */
-void invocar_acciones(accion_t* accion, tablero_t* tablero) {
+void invocar_acciones(accion_t *accion, tablero_t *tablero)
+{
+	if (accion == NULL || tablero == NULL)
+		return;
+	accion_t *curr = accion;
+	while (curr != NULL)
+	{
+		if (curr->destino->vida == 0 && curr->destino->en_juego == 1)
+		{
+			curr->invocar(tablero, curr->destino);
+			curr->destino->en_juego = 0;
+		}
+		else if (curr->destino->en_juego == 1)
+		{
+			curr->invocar(tablero, curr->destino);
+			if (curr->destino->vida == 0)
+			{
+				curr->destino->en_juego = 0;
+			}
+		}
+		curr = curr->siguiente;
+	}
 }
 
 /**
@@ -82,6 +116,29 @@ void invocar_acciones(accion_t* accion, tablero_t* tablero) {
  * El resultado debe ser escrito en las posiciones de memoria proporcionadas
  * como parámetro.
  */
-void contar_cartas(tablero_t* tablero, uint32_t* cant_rojas, uint32_t* cant_azules) {
-	*cant_rojas = *cant_azules = 0;
+void contar_cartas(tablero_t *tablero, uint32_t *cant_rojas, uint32_t *cant_azules)
+{
+	if (tablero == NULL || cant_azules == NULL || cant_rojas == NULL)
+		return;
+
+	*cant_azules = 0;
+	*cant_rojas = 0;
+	for (int i = 0; i < 5; i++)
+	{
+		for (int j = 0; j < 10; j++)
+		{
+			carta_t *curr = tablero->campo[i][j];
+			if (curr != NULL)
+			{
+				if (curr->jugador == 1)
+				{
+					*cant_rojas += 1;
+				}
+				else if (curr->jugador == 2)
+				{
+					*cant_azules += 1;
+				}
+			}
+		}
+	}
 }

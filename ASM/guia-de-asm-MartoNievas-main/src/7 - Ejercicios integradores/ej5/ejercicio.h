@@ -24,23 +24,25 @@
  *
  * Posee un nombre, una cantidad de puntos de vida y un dueño.
  */
-typedef struct carta {
-	bool en_juego;    // asmdef_offset:carta.en_juego
-	char nombre[12];  // asmdef_offset:carta.nombre
-	uint16_t vida;    // asmdef_offset:carta.vida
-	uint8_t jugador;  // asmdef_offset:carta.jugador
-} carta_t;  // asmdef_size:carta.SIZE
+typedef struct carta
+{
+	bool en_juego;	 // asmdef_offset:carta.en_juego 0
+	char nombre[12]; // asmdef_offset:carta.nombre  1
+	uint16_t vida;	 // asmdef_offset:carta.vida  14
+	uint8_t jugador; // asmdef_offset:carta.jugador  16
+} carta_t;			 // asmdef_size:carta.SIZE 18
 
 /**
  * Una instancia del juego en proceso.
  *
  * Posee las manos de ambos jugadores humanos y el campo de juego
  */
-typedef struct tablero {
-	carta_t* mano_jugador_rojo;               // asmdef_offset:tablero.mano_jugador_rojo
-	carta_t* mano_jugador_azul;               // asmdef_offset:tablero.mano_jugador_azul
-	carta_t* campo[ALTO_CAMPO][ANCHO_CAMPO];  // asmdef_offset:tablero.campo
-} tablero_t;  // asmdef_size:tablero.SIZE
+typedef struct tablero
+{
+	carta_t *mano_jugador_rojo;				 // asmdef_offset:tablero.mano_jugador_rojo 0
+	carta_t *mano_jugador_azul;				 // asmdef_offset:tablero.mano_jugador_azul 8
+	carta_t *campo[ALTO_CAMPO][ANCHO_CAMPO]; // asmdef_offset:tablero.campo 16
+} tablero_t;								 // asmdef_size:tablero.SIZE 24
 
 /**
  * La implementación de una acción del juego.
@@ -48,7 +50,7 @@ typedef struct tablero {
  * Toma la carta destino y una instancia del juego, realiza modificaciones
  * arbitrarias a ambos.
  */
-typedef void accion_fn_t(tablero_t* tablero, carta_t* carta);
+typedef void accion_fn_t(tablero_t *tablero, carta_t *carta);
 
 /**
  * Una acción del juego.
@@ -56,11 +58,12 @@ typedef void accion_fn_t(tablero_t* tablero, carta_t* carta);
  * Posee una pieza de código a invocar, una carta destino y (opcionalmente) la
  * acción que sigue luego de ésta
  */
-typedef struct accion {
-	accion_fn_t* invocar;      // asmdef_offset:accion.invocar
-	carta_t* destino;          // asmdef_offset:accion.destino
-	struct accion* siguiente;  // asmdef_offset:accion.siguiente
-} accion_t;  // asmdef_size:accion.SIZE
+typedef struct accion
+{
+	accion_fn_t *invocar;	  // asmdef_offset:accion.invocar 0
+	carta_t *destino;		  // asmdef_offset:accion.destino 8
+	struct accion *siguiente; // asmdef_offset:accion.siguiente 16
+} accion_t;					  // asmdef_size:accion.SIZE 24
 
 /**
  * Dada una secuencia de acciones determinar si hay alguna cuya carta tenga un
@@ -72,7 +75,7 @@ typedef struct accion {
  *   - El valor `0` es `false`
  *   - Cualquier otro valor es `true`
  */
-bool hay_accion_que_toque(accion_t* accion, char* nombre);
+bool hay_accion_que_toque(accion_t *accion, char *nombre);
 
 /**
  * Invoca las acciones que fueron encoladas en la secuencia proporcionada en el
@@ -95,7 +98,7 @@ bool hay_accion_que_toque(accion_t* accion, char* nombre);
  * la primera acción, segundo la segunda acción, etc). Las acciones asumen este
  * orden de ejecución.
  */
-void invocar_acciones(accion_t* accion, tablero_t* tablero);
+void invocar_acciones(accion_t *accion, tablero_t *tablero);
 
 /**
  * Cuenta la cantidad de cartas rojas y azules en el tablero.
@@ -114,7 +117,7 @@ void invocar_acciones(accion_t* accion, tablero_t* tablero);
  * El resultado debe ser escrito en las posiciones de memoria proporcionadas
  * como parámetro.
  */
-void contar_cartas(tablero_t* tablero, uint32_t* cant_rojas, uint32_t* cant_azules);
+void contar_cartas(tablero_t *tablero, uint32_t *cant_rojas, uint32_t *cant_azules);
 
 /**
  * Marca el ejercicio 1 como hecho (`true`) o pendiente (`false`).
