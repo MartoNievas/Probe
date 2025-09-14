@@ -51,14 +51,14 @@ EJERCICIO_1_HECHO: db TRUE
 ; Funciones a implementar:
 ;   - invocar_acciones
 global EJERCICIO_2_HECHO
-EJERCICIO_2_HECHO: db FALSE
+EJERCICIO_2_HECHO: db TRUE
 
 ; Marca el ejercicio 3 como hecho (`true`) o pendiente (`false`).
 ;
 ; Funciones a implementar:
 ;   - contar_cartas
 global EJERCICIO_3_HECHO
-EJERCICIO_3_HECHO: db FALSE
+EJERCICIO_3_HECHO: db TRUE
 
 section .text
 
@@ -103,7 +103,7 @@ hay_accion_que_toque:
 	mov r15, rsi 
 	.ciclo: 
 	cmp rbx,0 
-	je .epilogo
+	je .caso_false
 	;caso contrario verificamos 
 
 	mov r14,[rbx + accion.destino]
@@ -119,6 +119,9 @@ hay_accion_que_toque:
 	.next: 
 	mov rbx,[rbx + accion.siguiente] ;curr = curr->siguiente
 	jmp .ciclo
+	
+	.caso_false:	
+	xor rax,rax ;correcion fallaba que cualquier valor distinto de 0 era true y cada vez que llamo a strcmp se modifica rax
 
 	.epilogo:
 	add rsp,8
@@ -152,16 +155,80 @@ hay_accion_que_toque:
 ; orden de ejecución.
 ;
 ; ```c
-; void invocar_acciones(accion_t* accion, tablero_t* tablero);
+; void invocar_acciones(accion_t* accion[rdi], tablero_t* tablero[rdi]);
 ; ```
+
+
 global invocar_acciones
 invocar_acciones:
-	; Te recomendamos llenar una tablita acá con cada parámetro y su
-	; ubicación según la convención de llamada. Prestá atención a qué
-	; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
-	;
-	; r/m64 = accion_t*  accion
-	; r/m64 = tablero_t* tablero
+	push rbp 
+	mov rbp,rsp 
+	push rbx 
+	push r15 
+	push r14 
+	push r13
+	push r12 
+	sub rsp,9
+
+	;verificamos que ningun puntero sea nulo 
+	cmp rdi,0
+	je .epilogo
+	cmp rsi,0
+	je .epilogo
+
+	;caso contrario invocamos acciones 
+	;preservamos el puntero a la accion y el puntero al tablero en registro no volatiles 
+	mov rbx,rdi ;aqui tenemos la accion 
+	mov r15,rsi ;aqui tenemos el tablero 
+
+	.ciclo: 
+	cmp rbx,0
+	je .epilogo
+	;caso contrario iteramos 
+
+	mov r14,[rbx + accion.destino]
+	mov r13b, byte [r14 + carta.en_juego] ; en r13b tenemos si esta en juego la carta 
+	cmp r13b,1
+	jne .next ;si no esta en juego seguimos iterando 
+
+	;caso contrario verifcamos si la vida es 0, con la carta en r14 
+	movzx r12, word [r14 + carta.vida] ;en r12b tenemos la vida 
+	cmp r12,0
+	je .caso_cero_vida_desde_el_incio
+
+	;caso contrario tiene vida > 0 entonce solo tenemos que invocar la funcion y verficar si despues de la ejecucion tiene 0 o mas vida 
+	mov rdi,r15
+	mov rsi,[rbx + accion.destino]
+	call [rbx + accion.invocar] ;llamamos a la funcion 
+	;ahora verfifcamos si la vida es 0, si es 0 tenemos que dejarla fuera de juego 
+
+	cmp [r14 + carta.vida],byte 0
+	jne .next 
+
+	.caso_cero_vida_despues_de_invocar: 
+	mov [r14 + carta.en_juego], byte 0
+	jmp .next
+
+	.caso_cero_vida_desde_el_incio: 
+	mov rdi,r15
+	mov rsi,[rbx + accion.destino]
+	call [rbx + accion.invocar]
+	mov [r14 + carta.en_juego], byte 0
+
+	.next:
+	mov rbx,[rbx +accion.siguiente]
+	jmp .ciclo
+
+
+	.epilogo:
+	add rsp,8 
+	pop r12
+	pop r13
+	pop r14
+	pop r15
+	pop rbx 
+	mov rsp,rbp
+	pop rbp
 	ret
 
 ; Cuenta la cantidad de cartas rojas y azules en el tablero.
@@ -181,15 +248,82 @@ invocar_acciones:
 ; como parámetro.
 ;
 ; ```c
-; void contar_cartas(tablero_t* tablero, uint32_t* cant_rojas, uint32_t* cant_azules);
+; void contar_cartas(tablero_t* tablero[rdi], uint32_t*[rsi] cant_rojas, uint32_t* cant_azules[rdx]);
 ; ```
 global contar_cartas
 contar_cartas:
-	; Te recomendamos llenar una tablita acá con cada parámetro y su
-	; ubicación según la convención de llamada. Prestá atención a qué
-	; valores son de 64 bits y qué valores son de 32 bits o 8 bits.
-	;
-	; r/m64 = tablero_t* tablero
-	; r/m64 = uint32_t*  cant_rojas
-	; r/m64 = uint32_t*  cant_azules
+	push rbp
+	mov rbp,rsp 
+	push rbx 
+	push r15
+	push r14 
+	push r13
+	push r12 
+	sub rsp,8
+
+	;verficamos que los punteros no sean nulos 
+	cmp rdi,0
+	je .epilogo
+	cmp rsi,0
+	je .epilogo
+	cmp rdx,0 
+	je .epilogo
+
+	;caso contrario pasamos los parametros de entrada a registros no volatiles 
+	mov rbx,rdi 
+	mov r15,rsi 
+	mov r14,rdx 
+
+	;ponemos el campo del tablero en r13 
+	lea r13, [rbx + tablero.campo] ;aqui tenemos un puntero al incio del campo
+	
+	;inicializamos los contadores de cartas 
+	xor r9,r9 ;cant jugador rojo 
+	xor r10,r10 ;cant jugador aazul
+	xor r11,r11 ;int i = 0; 
+	.ciclo: 
+	cmp r11,50
+	jge .fin_ciclo
+	;ponemos la carta en r12 
+	mov r12, [r13 + r11*8]
+
+	;ahora verficamos que el puntero no sea null 
+	cmp r12,0 
+	je .next 
+
+	;caso contrario debemos verificar si es rojo o azul 
+
+	cmp [r12 + carta.jugador],byte JUGADOR_ROJO
+	jne .probar_jugador_azul 
+	;si es jugador rojo 
+	inc r9 
+	jmp .next
+
+
+	.probar_jugador_azul:	
+	cmp [r12 + carta.jugador], byte JUGADOR_AZUL
+	jne .next
+
+	;si es jugador azul 
+	inc r10 
+
+	.next: 
+	inc r11 
+	jmp .ciclo
+
+	.fin_ciclo:
+	mov [r15], r9d
+	mov [r14], r10d
+
+
+
+	.epilogo:
+	add rsp,8
+	pop r12
+	pop r13
+	pop r14
+	pop r15
+	pop rbx 
+	mov rsp,rbp
+	pop rbp
 	ret
