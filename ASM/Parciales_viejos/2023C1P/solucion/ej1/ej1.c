@@ -1,29 +1,37 @@
 #include "ej1.h"
+#include <stdint.h>
+#include <stdlib.h>
+#include <unistd.h>
 
-uint32_t cuantosTemplosClasicos_c(templo *temploArr, size_t temploArr_len){
-    uint32_t contador_de_clasicos = 0;
-    for(size_t i = 0; i < temploArr_len; i++){
-        uint8_t c_larga_actual = temploArr[i].colum_largo;
-        uint8_t c_corto_actual = temploArr[i].colum_corto;
-        if(2*c_corto_actual + 1 == c_larga_actual){
-            contador_de_clasicos += 1;
-        }
+uint32_t cuantosTemplosClasicos_c(templo *temploArr, size_t temploArr_len) {
+  if (temploArr == NULL) {
+    return 0;
+  }
+  uint32_t res = 0;
+  for (uint32_t i = 0; i < temploArr_len; i++) {
+    if (temploArr[i].colum_corto * 2 + 1 == temploArr[i].colum_largo) {
+      res++;
     }
-    return contador_de_clasicos;
+  }
+  return res;
 }
-  
-templo* templosClasicos_c(templo *temploArr, size_t temploArr_len){
-    uint32_t clasicos = cuantosTemplosClasicos(temploArr, temploArr_len);
-    templo* templos_clasicos_arr = malloc(sizeof(templo) * clasicos);
-    size_t j = 0;
-    for(size_t i = 0; i < temploArr_len; i++){
-        uint8_t c_larga_actual = temploArr[i].colum_largo;
-        uint8_t c_corto_actual = temploArr[i].colum_corto;
-        if(2*c_corto_actual + 1 == c_larga_actual){
-            templos_clasicos_arr[j] = temploArr[i];
-            j++;
-        }
-    }
-    return templos_clasicos_arr;
-}   
 
+templo *templosClasicos_c(templo *temploArr, size_t temploArr_len) {
+  if (temploArr == NULL) {
+    return NULL;
+  }
+  uint32_t cantidadDeTemplosClasicos =
+      cuantosTemplosClasicos(temploArr, temploArr_len);
+  templo *res = malloc(sizeof(templo) * cantidadDeTemplosClasicos);
+  if (res == NULL) {
+    return NULL;
+  }
+  uint32_t i1 = 0;
+  for (uint32_t i = 0; i < temploArr_len; i++) {
+    if (temploArr[i].colum_corto * 2 + 1 == temploArr[i].colum_largo) {
+      res[i1] = temploArr[i];
+      i1++;
+    }
+  }
+  return res;
+}

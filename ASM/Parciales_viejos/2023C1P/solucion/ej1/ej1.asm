@@ -83,6 +83,7 @@ templosClasicos:
         pop rbp
         ret
 
+
    
 
 ;uint32_t cuantosTemplosClasicos_c(templo *temploArr, size_t=64bits temploArr_len){
@@ -90,41 +91,43 @@ templosClasicos:
 ;rsi->temploArr_len
 cuantosTemplosClasicos:
     .prologo:
-        push rbp
-        mov rbp, rsp
+    push rbp 
+    mov rbp,rsp 
+    
 
-        xor rax, rax ; clasicos = 0
-        xor r9, r9; i = 0
+    xor rax,rax 
+    cmp rdi,0 
+    je .epilogo
 
-    .ciclo:
-        cmp r9, rsi ; i ==? temploArr_len
-        je .epilogo 
+    xor r9,r9 ; int i = 0
 
-        xor rcx, rcx
-        xor rdx, rdx
+    .ciclo: 
+    cmp r9,rsi 
+    je .epilogo
 
-        mov cl, byte [rdi] ; cl=temploarr[i].clarga
-        mov dl, byte [rdi + 16] ;dl=temploarr[i].ccorta
+    xor rdx,rdx 
+    xor rcx,rcx 
 
-        inc r9 ;i++
-        add rdi, 24 ;paso al sig templo
+    mov cl, [rdi]
+    mov dl, [rdi + 16] 
 
-    .cuenta:
-        ; shl dl, 1 ;dl=temploarr[i].ccorta * 2
-        ; add dl, 1 ;dl=temploarr[i].ccorta + 1
+    inc r9 
+    add rdi,24 ;siguiente templo 
 
-        ; cmp cl, dl ;cl == ? dl
-        ; jne .ciclo
 
-        shl rdx, 1
-        add rdx, 1
+    .cuentas: 
 
-        cmp rcx, rdx
-        jne .ciclo
+    shl rdx,1
+    inc rdx 
 
-        inc rax ;clasicos++
-        jmp .ciclo ;y vuelvo al ciclo
+    cmp rdx,rcx 
+    jne .ciclo 
+
+    inc rax     
+    jmp .ciclo
+
 
     .epilogo:
-        pop rbp
+    mov rsp,rbp 
+    pop rbp 
         ret
