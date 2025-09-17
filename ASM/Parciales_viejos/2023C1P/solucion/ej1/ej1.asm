@@ -10,77 +10,84 @@ section .text
 ;rdi->*temploArr
 ;rsi->temploArr_len
 templosClasicos:
-    .prologo:
-        push rbp
-        mov rbp, rsp
-        
-        push r14
+        push rbp 
+        mov rbp,rsp 
+        push rbx 
         push r15
+        push r14
+        push r13
+        
+        ;verficamos si el puntero es nulo 
+        xor rax,rax 
+        cmp rdi, 0
+        je .epilogo
 
-    .preciclo:
-        push rdi
-        push rsi ;preservo los parametros originales antes del call (pila alineada)
+        ;caso creamos el puntero al nuevo arreglo de templos clasicos
 
-        call cuantosTemplosClasicos ;los parametros ya estan pasados ya q son los mismos
-        ;en rax tengo el resultado
+        push rdi 
+        push rsi 
+        call cuantosTemplosClasicos
 
-        mov rdi, rax ;rdi tiene la ctad de templos clasicos
-        imul rdi, 24 ;multiplico los clasicos x 24bytes (calculando la cantidad de espacio para pedirle al malloc)
+        imul rax,24 
+        mov rdi,rax 
 
-        call malloc ;el parametro ya esta en rdi (24*clasicos)
-        ;en rax tengo el resultado
+        call malloc ;en malloc tenemos el puntero al arreglo 
 
         pop rsi
-        pop rdi ;restauro los params originales
+        pop rdi 
 
-        xor r9, r9; i=0
-        xor r10, r10; j=0
+        mov rbx,rdi 
+        mov r15,rsi 
 
-    .ciclo:
-        cmp r9, rsi ; i ==? temploArr_len
-        je .epilogo 
+        xor r8,r8 ; int i = 0
+        xor r9,r9 ; int i1 = 0 
 
-        xor rcx, rcx
-        xor rdx, rdx
+        .ciclo: 
+        cmp r8,r15
+        jge .epilogo
 
-        mov cl, byte [rdi] ; cl=temploarr[i].clarga
-        mov dl, byte [rdi + 16] ;dl=temploarr[i].ccorta
+        ;caso contrario vamos iterando sobre el array 
+        mov r10,r8 
+        imul r10,24 
+        movzx r11, byte [rbx + r10 + 0] ;aca tenemos el lado largo 
+        movzx r13, byte [rbx + r10 + 16] ;aca tenemos el lado corto 
 
+        .cuentas: 
 
-    .cuenta:
-    
-        shl rdx, 1 ;dl=temploarr[i].ccorta * 2
-        add rdx, 1 ;dl=temploarr[i].ccorta + 1
+        shl r13,1
+        inc r13 
+        cmp r13,r11
+        jne .next 
 
-        cmp rcx, rdx ;cl == ? dl
-        jne .next_templo
+        ;si son iguales debemos copiar el struct 
+        ;calculamos el offset 
+        mov r14,r9
+        imul r14,24 
+        
+        ;ahora debemos ir trayendo el struct de a 8 bytes
+        mov rcx,[rbx + r10 + 0]
+        mov [rax + r14 + 0],rcx ;primero 8 bytes 
 
-        mov rcx, [rdi] ;rcx=temploArr[i]
+        mov rcx,[rbx + r10 + 8]
+        mov [rax + r14 + 8],rcx ;segundos 8 bytes 
 
-        mov r14, r10
-        imul r14, 24 ;multiplico por los bytes de la estructura
+        mov rcx, [rbx + r10 + 16]
+        mov [rax + r14 + 16],rcx
 
-        mov [rax + r14], rcx  ;templos_clasicos_arr[j] = temploArr[i]; (primeros 8bytes)
+        inc r9 ;i1++;
 
-        mov rcx, [rdi + 8]
-        mov [rax + r14  + 8], rcx ;(segundos 8bytes)
-
-        mov rcx, [rdi + 16]
-        mov [rax + r14 + 16], rcx ; (terceros 8bytes)
-
-        inc r10 ;j++
-
-    .next_templo:
-
-        inc r9 ;i++
-        add rdi, 24 ;paso al sig templo
+        .next: 
+        inc r8 
         jmp .ciclo
+ 
 
-
-     .epilogo:
-        pop r15
+        .epilogo: 
+        pop r13
         pop r14
-        pop rbp
+        pop r15
+        pop rbx 
+        mov rsp,rbp 
+        pop rbp 
         ret
 
 
@@ -90,44 +97,42 @@ templosClasicos:
 ;rdi->*temploArr
 ;rsi->temploArr_len
 cuantosTemplosClasicos:
-    .prologo:
-    push rbp 
-    mov rbp,rsp 
-    
+        push rbp 
+        mov rbp,rsp 
+        push rbx 
+        push r14        
 
-    xor rax,rax 
-    cmp rdi,0 
-    je .epilogo
+        ;verificamos si el puntero es nulo 
+        xor rax,rax ;uint32_t res = 0 
+        cmp rdi, 0 
+        je .epilogo 
 
-    xor r9,r9 ; int i = 0
+        xor r8,r8 ; int i = 0; 
 
-    .ciclo: 
-    cmp r9,rsi 
-    je .epilogo
+        .ciclo: 
+        cmp r8,rsi 
+        jge .epilogo
 
-    xor rdx,rdx 
-    xor rcx,rcx 
+        mov r9,r8 
+        imul r9,24 
+        movzx rdx, byte [rdi + r9 + 0] ;tenemos el lado largo 
+        movzx rcx, byte [rdi + r9 + 16]; tenemos el lado corto 
 
-    mov cl, [rdi]
-    mov dl, [rdi + 16] 
+        .cuenta: 
+        shl rcx,1
+        inc rcx 
+        cmp rcx,rdx 
+        jne .next 
 
-    inc r9 
-    add rdi,24 ;siguiente templo 
+        inc rax 
 
+        .next: 
+        inc r8 
+        jmp .ciclo
 
-    .cuentas: 
-
-    shl rdx,1
-    inc rdx 
-
-    cmp rdx,rcx 
-    jne .ciclo 
-
-    inc rax     
-    jmp .ciclo
-
-
-    .epilogo:
-    mov rsp,rbp 
-    pop rbp 
+        .epilogo: 
+        pop r14
+        pop rbx 
+        mov rsp,rbp 
+        pop rbp 
         ret

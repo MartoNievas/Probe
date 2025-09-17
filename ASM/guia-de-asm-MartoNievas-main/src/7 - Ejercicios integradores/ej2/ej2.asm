@@ -109,7 +109,7 @@ optimizar:
 
 		;caso contrario verifique todas las condiciones 
 
-		dec dword [rdi + ATTACKUNIT_REFERENCES] ;decrementamos las referencias de atackunit 
+		dec byte [rdi + ATTACKUNIT_REFERENCES] ;decrementamos las referencias de atackunit 
 		jnz no_liberar ;si las referencias no son 0, no liberamos memoria 
 
 		;caso contrario si liberamos 
@@ -121,7 +121,7 @@ optimizar:
 
 		no_liberar: 
 			mov [rbx + r10*8 ],r12 ;mapa[i][j] = compartido
-			inc dword [r12 + ATTACKUNIT_REFERENCES] ;incrementamos las referencias 
+			inc byte [r12 + ATTACKUNIT_REFERENCES] ;incrementamos las referencias 
  
 
 		siguiente: 
@@ -279,7 +279,7 @@ modificarUnidad:
 
 	;caso contrario, vamos con la modificacion 
 	;primer caso si hay mas de una referencia 
-	mov rdi, [r13 + ATTACKUNIT_REFERENCES]
+	movzx rdi, byte [r13 + ATTACKUNIT_REFERENCES]
 	cmp rdi, 1 ;si tiene mas de una referencia creamos una nueva unidad pidiendo memoria 
 	jg .nueva_unidad  
 
