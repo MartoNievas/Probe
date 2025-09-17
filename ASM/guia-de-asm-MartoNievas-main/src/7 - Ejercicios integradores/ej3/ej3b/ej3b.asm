@@ -42,7 +42,7 @@ resolver_automaticamente:
     push r13
     push r12
     sub rsp,8 ;stack frame alineado 
-    mov [rbp- 48],rcx ;guardamos el largo en la pila por si lo nesecitamos 
+    mov [rbp - 48],rcx ;guardamos el largo en la pila por si lo nesecitamos 
 
     ;verficamos que los punteros no sean nulos 
     .comprobacion_de_punteros:
@@ -69,9 +69,9 @@ resolver_automaticamente:
     ;calculamos el offset 
     mov r9,r10
     imul r9,CASO_SIZE
-    mov rdi,[r15 + r9] ;en rdi = arreglos_casos[i]
-    mov rsi,[r15 + r9 + CASO_USUARIO_OFFSET]
-    mov rsi, [rsi + USUARIO_NIVEL_OFFSET]
+    lea rdi,[r15 + r9] ;en rdi = arreglos_casos[i]
+    mov rsi,[rdi + CASO_USUARIO_OFFSET]
+    movzx rsi, word [rsi + USUARIO_NIVEL_OFFSET]
 
     .verficacion_de_nivel: 
 
@@ -95,8 +95,13 @@ resolver_automaticamente:
     push r10
     push r11
     push r9
+    push rdx
+    sub rsp,8
     lea rdi,[r15 + r9]
     call rbx ;llamamos a la funcion de comparacion 
+    mov rcx,[rbp -48]
+    add rsp,8
+    pop rdx
     pop r9
     pop r11
     pop r10 
@@ -117,12 +122,15 @@ resolver_automaticamente:
     push r10
     push r11 
     push r9
-
+    push rdx 
+    sub rsp,8
     lea rdi,[r15 + r9 + CASO_CATEGORIA_OFFSET]
     lea rsi, cadena_rbo
     mov rdx,4
     call strncmp
     mov rcx,[rbp-48]
+    add rsp,8
+    pop rdx
     pop r9
     pop r11 
     pop r10 
@@ -136,12 +144,15 @@ resolver_automaticamente:
     push r10
     push r11
     push r9
-
+    push rdx 
+    sub rsp,8
     lea rdi, [r15 + r9 + CASO_CATEGORIA_OFFSET]
     lea rsi,cadena_clt
     mov rdx,4
     call strncmp
     mov rcx,[rbp - 48]
+    add rsp,8
+    pop rdx
     pop r9
     pop r11
     pop r10

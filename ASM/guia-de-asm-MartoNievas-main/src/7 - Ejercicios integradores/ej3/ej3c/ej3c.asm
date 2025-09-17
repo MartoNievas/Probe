@@ -57,6 +57,7 @@ lea rdi,[r15 + CASO_CATEGORIA_OFFSET]
 lea rsi,cadena_clt
 mov rdx,4
 call strncmp ;comparamos y vemos que nos devuelve 
+cmp rax,0
 jnz probar_rbo
 
 inc byte [r14 + ESTADISTICAS_CLT_OFFSET] ;incrementamos clt 
@@ -67,6 +68,7 @@ lea rdi, [r15 + CASO_CATEGORIA_OFFSET]
 lea rsi,cadena_rbo
 mov rdx,4 
 call strncmp
+cmp rax,0
 jnz probar_ksc
 
 inc byte [r14 + ESTADISTICAS_RBO_OFFSET] ;incrementamos rbo
@@ -77,6 +79,7 @@ lea rdi, [r15 + CASO_CATEGORIA_OFFSET]
 lea rsi,cadena_ksc
 mov rdx,4
 call strncmp
+cmp rax,0
 jnz probar_kdt
 
 inc byte [r14 + ESTADISTICAS_KSC_OFFSET]
@@ -86,6 +89,7 @@ lea rdi, [r15 + CASO_CATEGORIA_OFFSET]
 lea rsi,cadena_kdt
 mov rdx,4
 call strncmp
+cmp rax,0
 jnz contar_estado
 
 inc byte [r14 + ESTADISTICAS_KDT_OFFSET]
@@ -93,9 +97,9 @@ inc byte [r14 + ESTADISTICAS_KDT_OFFSET]
 contar_estado: 
 
 ;ahora veamos a que estado pertenece 
-mov edi, dword [r15 + CASO_ESTADO_OFFSET]
+movzx rdi, word [r15 + CASO_ESTADO_OFFSET]
 
-cmp edi,0
+cmp rdi,0
 jne probar_estado1
 
 inc byte [r14 + ESTADISTICAS_ESTADO0_OFFSET]
@@ -166,7 +170,7 @@ calcular_estadisticas:
 
     ;ahora veamos si usuario != 0 o == 0
     xor rcx,rcx ;int i = 0
-    cmp r14,0
+    cmp r14d,0
     je .contar_todos
 
 
@@ -185,7 +189,11 @@ calcular_estadisticas:
     mov rsi,r13 ;pasamos el puntero a la estructura estadistica_t
     push r9
     push rcx
+    push r8
+    sub rsp,8
     call actualizar_estadistica
+    add rsp,8
+    pop r8
     pop rcx
     pop r9
 
@@ -201,9 +209,14 @@ calcular_estadisticas:
     imul r9,CASO_SIZE
     lea rdi,[rbx + r9]
     mov rsi,r13
+    
     push r9
     push rcx
+    push r8
+    push rdx
     call actualizar_estadistica
+    pop rdx
+    pop r8
     pop rcx
     pop r9
 

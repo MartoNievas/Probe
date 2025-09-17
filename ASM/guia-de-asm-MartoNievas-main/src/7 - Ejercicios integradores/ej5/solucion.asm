@@ -168,7 +168,7 @@ invocar_acciones:
 	push r14 
 	push r13
 	push r12 
-	sub rsp,9
+	sub rsp,8
 
 	;verificamos que ningun puntero sea nulo 
 	cmp rdi,0

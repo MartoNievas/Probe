@@ -238,5 +238,19 @@ listasQueSuman 0 = [[]]
 listasQueSuman n = [x:xs | x <- [1..n],xs <- listasQueSuman (n-x) ]
 
 
+recrConFoldr :: (a -> [a] -> b -> b) -> b -> [a] -> b 
+recrConFoldr f z xs = 
+    snd (foldr step (\_ -> ([],z)) xs xs) 
+    where 
+        step x r (_:ys) = 
+            let (cola, rec) = r ys 
+            in (x:cola, f x ys rec)
+        step _ _ [] = error "no deberia pasar"
 
+recrConFoldr2 :: (a -> [a] -> b -> b) -> b -> [a] -> b 
+recrConFoldr2 f z xs = foldr (\(x:xs) r -> f x xs r ) z (init (tails xs))
 
+tails :: [a] -> [[a]]
+tails = foldr step [[]]
+  where
+    step x acc = (x : head acc) : acc

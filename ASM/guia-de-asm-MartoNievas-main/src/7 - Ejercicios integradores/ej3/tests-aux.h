@@ -4,7 +4,6 @@
 #include "../test_utils/test-utils.h"
 #include "./ejs.h"
 
-
 /**
  * El mensaje [DONE] escrito en verde.
  */
@@ -25,9 +24,9 @@
  */
 #define SKIP "[\033[95;1mSKIP\033[0m] "
 
-caso_t crear_caso(uint32_t id, uint32_t nivel, const char* categoria, uint16_t estado);
+caso_t crear_caso(uint32_t id, uint32_t nivel, const char *categoria,
+                  uint16_t estado);
 
-void liberar_casos(caso_t* casos, int largo);
-
+void liberar_casos(caso_t *casos, int largo);
 
 #endif
