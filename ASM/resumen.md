@@ -58,10 +58,14 @@
 ---
 
 ## 🛠️ Operaciones úTiles frecuentes en ASM
-
+## Declarar un string con null terminator
+```asm
+section .data
+    mi_cadena db "Hola, mundo!", 0 ; La cadena termina con un byte nulo (0x00)
+```
 ### Acceder a un índice de array:
 ```asm
-lea rax,[rdi] carga la direccion efectiva en rax, es como el & en C
+lea rax,[rdi] ;carga la direccion efectiva en rax, es como el & en C
 movzx rax, word [rsi + rdx*2]    ; acceder a indice[i] de uint16_t*
 mov rbx, [rdi + rax*8]           ; acceder a inventario[indice[i]] de item_t**
 ```
