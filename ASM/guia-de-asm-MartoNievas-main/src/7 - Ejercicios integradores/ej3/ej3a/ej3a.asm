@@ -186,7 +186,7 @@ xor r14,r14
 .pre_ciclo:
 mov rsi,[rbp-8]
 xor r10,r10 ;i = 0
-xor rdi,rdi ;i0 = 00 
+xor rdi,rdi ;i0 = 0
 xor rdx,rdx ;i1 = 0
 xor rcx,rcx ;i2 = 0
 ;ahora ponemos los casos en donde corresponeden 
@@ -213,26 +213,48 @@ je .es_nivel1
 ;si no es nivel 0, ni 1, entonces es nivel 2 
 ;lo colocamos en la posicion i2
 .es_nivel2:
-    mov r9,rcx 
-    imul r9,CASO_SIZE
-    mov [r14 + r9],r11 ;res->casos_nivel_3[i2] = arreglo_casos[i] 
-    inc rcx ;i2++
+    mov r11,[rbx + r9 + CASO_CATEGORIA_OFFSET]
+    mov [r14 + rcx + CASO_CATEGORIA_OFFSET],r11 ;res->casos_nivel_3[i2] = arreglo_casos[i] 
+
+    movzx r11,word[rbx + r9 + CASO_ESTADO_OFFSET]
+    mov [r14 + rcx + CASO_ESTADO_OFFSET],r11
+
+    mov r11, [rbx + r9 + CASO_USUARIO_OFFSET]
+    mov [r14 + rcx + CASO_USUARIO_OFFSET],r11
+
+    add rcx,16
     inc r10 ;i++
     jmp .ciclo_asignacion_de_casos
 
 .es_nivel1: 
-    mov r9,rdx
-    imul r9,CASO_SIZE
-    mov [r13 + r9],r11
-    inc rdx ;i1++
+    
+    mov r11d,[rbx + r9 + CASO_CATEGORIA_OFFSET]
+    mov [r13 + rdx + CASO_CATEGORIA_OFFSET],r11d
+
+    movzx r11, word [rbx + r9 + CASO_ESTADO_OFFSET]
+    mov [r13 + rdx + CASO_ESTADO_OFFSET],r11
+
+    mov r11, [rbx + r9 + CASO_USUARIO_OFFSET]
+    mov [r13 + rdx + CASO_USUARIO_OFFSET],r11
+
+    add rdx,16 ;i1++
     inc r10 ;i++
     jmp .ciclo_asignacion_de_casos
 
 .es_nivel0:
-    mov r9,rdi
-    imul r9,CASO_SIZE
-    mov [r12 + r9],r11
-    inc rdi ;i0++
+    ;primero copiamos la categoria
+    mov r11d, [rbx + r9 + CASO_CATEGORIA_OFFSET]
+    mov [r12 + rdi + CASO_CATEGORIA_OFFSET],r11d
+
+    ;copiamos el estado
+    movzx r11, word [rbx + r9 + CASO_ESTADO_OFFSET]
+    mov [r12 + rdi + CASO_ESTADO_OFFSET],r11
+
+    ;por ultimo el ptr al usuario 
+    mov r11, [rbx + r9 + CASO_USUARIO_OFFSET]
+    mov [r12 + rdi + CASO_USUARIO_OFFSET],r11
+
+    add rdi,16
     inc r10 ;i++
     jmp .ciclo_asignacion_de_casos
 
