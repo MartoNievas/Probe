@@ -59,9 +59,53 @@
 
 ## 🛠️ Operaciones úTiles frecuentes en ASM
 
+# Conversión entre enteros, floats y doubles en x86-64 (SSE2+)
+
+```asm
+; ========================
+; Entero → Float
+; ========================
+cvtsi2ss xmm1, r/m32   ; Convierte entero de 32 bits → float en xmm1
+cvtsi2ss xmm1, r/m64   ; Convierte entero de 64 bits → float en xmm1 (x86-64)
+
+; ========================
+; Float → Entero
+; ========================
+cvttss2si r32, xmm1    ; Convierte float → entero de 32 bits
+cvttss2si r64, xmm1    ; Convierte float → entero de 64 bits
+; cvtt = convert with truncation (ignora el modo de redondeo MXCSR)
+
+; ========================
+; Entero → Double
+; ========================
+cvtsi2sd xmm1, r/m32   ; Convierte entero de 32 bits → double en xmm1
+cvtsi2sd xmm1, r/m64   ; Convierte entero de 64 bits → double en xmm1 (x86-64)
+
+; ========================
+; Double → Entero
+; ========================
+cvttsd2si r32, xmm1    ; Convierte double → entero de 32 bits
+cvttsd2si r64, xmm1    ; Convierte double → entero de 64 bits
+
+; ========================
+; Float → Double
+; ========================
+cvtss2sd xmm1, xmm2    ; Convierte float en xmm2 → double en xmm1
+
+; ========================
+; Double → Float
+; ========================
+cvtsd2ss xmm1, xmm2    ; Convierte double en xmm2 → float en xmm1
+
+```
+## Declarar un string con null terminator
+```asm
+section .data
+    mi_cadena db "Hola, mundo!", 0 ; La cadena termina con un byte nulo (0x00)
+```
 ### Acceder a un índice de array:
 ```asm
-lea rax,[rdi] carga la direccion efectiva en rax, es como el & en C
+lea rax,[rdi] ;carga la direccion efectiva en rax, es como el & en C
 movzx rax, word [rsi + rdx*2]    ; acceder a indice[i] de uint16_t*
 mov rbx, [rdi + rax*8]           ; acceder a inventario[indice[i]] de item_t**
 ```
