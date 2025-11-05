@@ -31,7 +31,7 @@ void init_fantastruco_dir(fantastruco_t *card) {
  */
 bool EJERCICIO_1B_HECHO = true;
 
-// OPCIONAL: implementar en C
+// OPCIONAL: implementar en Cj
 fantastruco_t *summon_fantastruco() {
 
   fantastruco_t *res = malloc(sizeof(fantastruco_t));

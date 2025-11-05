@@ -48,7 +48,7 @@ extern bool EJERCICIO_2C_HECHO;
  */
 void optimizar(mapa_t mapa, attackunit_t *compartida,
                uint32_t (*fun_hash)(attackunit_t *));
-
+	
 /**
  * OPCIONAL: implementar en C
  */

@@ -12,17 +12,17 @@
  *                  la durabilidad llega a 0.
  */
 typedef struct {
-  char nombre[18];      // asmdef_offset:ITEM_NOMBRE 0
-  uint32_t fuerza;      // asmdef_offset:ITEM_FUERZA 20
-  uint16_t durabilidad; // asmdef_offset:ITEM_DURABILIDAD 26
-} item_t;               // asmdef_size:ITEM_SIZE 28
+	char nombre[18]; 		//asmdef_offset:ITEM_NOMBRE 0
+	uint32_t fuerza;		//asmdef_offset:ITEM_FUERZA 20
+	uint16_t durabilidad;	//asmdef_offset:ITEM_DURABILIDAD 26
+} item_t; //asmdef_size:ITEM_SIZE 28
 
 /**
  * El tipo de las funciones que se utilizan para comparar ítems.
  *
  * Devolver `true` significa los parámetros están en el orden correcto.
  */
-typedef bool (*comparador_t)(item_t *, item_t *);
+typedef bool (*comparador_t)(item_t*, item_t*);
 
 /**
  * Marca el ejercicio 1A como hecho (`true`) o pendiente (`false`).
@@ -43,11 +43,9 @@ extern bool EJERCICIO_1B_HECHO;
 /**
  * OPCIONAL: implementar en C
  */
-bool es_indice_ordenado(item_t **inventario, uint16_t *indice, uint16_t tamanio,
-                        comparador_t comparador);
+bool es_indice_ordenado(item_t** inventario, uint16_t* indice, uint16_t tamanio, comparador_t comparador);
 
 /**
  * OPCIONAL: implementar en C
  */
-item_t **indice_a_inventario(item_t **inventario, uint16_t *indice,
-                             uint16_t tamanio);
+item_t** indice_a_inventario(item_t** inventario, uint16_t* indice, uint16_t tamanio);

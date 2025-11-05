@@ -3,18 +3,18 @@
 #include <stdint.h>
 
 typedef struct {
-	char ability_name[10]; //asmdef_offset:DIRENTRY_NAME_OFFSET
-	void* ability_ptr; //asmdef_offset:DIRENTRY_PTR_OFFSET
-} directory_entry_t; //asmdef_size:DIRENTRY_SIZE
+	char ability_name[10]; //asmdef_offset:DIRENTRY_NAME_OFFSET 0
+	void* ability_ptr; //asmdef_offset:DIRENTRY_PTR_OFFSET 16
+} directory_entry_t; //asmdef_size:DIRENTRY_SIZE 24
 
 typedef directory_entry_t** directory_t;
 
 typedef struct {
-	directory_t __dir; //asmdef_offset:FANTASTRUCO_DIR_OFFSET
-	uint16_t __dir_entries; //asmdef_offset:FANTASTRUCO_ENTRIES_OFFSET
-	void* __archetype; //asmdef_offset:FANTASTRUCO_ARCHETYPE_OFFSET
-	bool face_up; //asmdef_offset:FANTASTRUCO_FACEUP_OFFSET
-} fantastruco_t; //asmdef_size:FANTASTRUCO_SIZE
+	directory_t __dir; //asmdef_offset:FANTASTRUCO_DIR_OFFSET 0
+	uint16_t __dir_entries; //asmdef_offset:FANTASTRUCO_ENTRIES_OFFSET 8
+	void* __archetype; //asmdef_offset:FANTASTRUCO_ARCHETYPE_OFFSET 16
+	bool face_up; //asmdef_offset:FANTASTRUCO_FACEUP_OFFSET 24
+} fantastruco_t; //asmdef_size:FANTASTRUCO_SIZE 32
 
 /**
  * Marca el ejercicio 1A como hecho (`true`) o pendiente (`false`).
