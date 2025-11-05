@@ -47,3 +47,11 @@ add esp,4
 
 popad
 ```
+
+# DUDAS QUE ME SURGEN: 
+
+- para el ejercicio 1 puedo asumir que malloco esta hecho, si es asi para responder la interrucion tengo que usar la isr?
+- que cosas debo tener en cuenta para poder pedir memoria dinamicamente.
+- Tengo que cambiar el page_fault_handlre completamente o solo agregar esta region de memoria y dejar la on-demand
+- Como se relacionan las estrcutrar que me dan y donde deberian ir.
+- Para el ejercicio ademas de la entrada de la IDT, el isr90, que mas tengo que hacer.
