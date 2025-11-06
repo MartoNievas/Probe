@@ -120,7 +120,7 @@ typedef struct {
 static sched_entry_t sched_tasks[MAX_TASKS] = {0};
 //Desaloja la tarea actual
 void sched_pause_current_task() {
-  sched_tasks[current_task].state = PAUSED;
+  sched_tasks[current_task].state = TASK_PAUSED;
 }
 //Marcamos todas las reservas de la tarea acutal para liberar, de eso se va a encargar el garbaje collector
 void sched_free_current_task() {
@@ -164,6 +164,21 @@ _isr14:
     add esp, 4          ; limpiamos el error code
     iret
 ```
+
+# Para el garbage collector:
+
+- 1. debo crear un nuevo tipo de tarea
+- 2. debo hacer una funcion similar `tss_create_user_task` pero que se llame `tss_create_system_task`
+- 3. Debo usar la funcion `create_task`, para crearla en la funcion tasks_init, debo crear un tarea de tipo GARBAGE_COLLECTOR, tambien podria aumentar el maximo de tareas que ahora es cuatro, para poder tener la 4 tareas de usuario y el garbage collector funcionando. Ademas deberia habilitarla con `sched_enable_task`.
+- 4. Ahora con todo para inicializarla debo crear la tarea en si. El proceso que se va a estar corriendo:
+  - Queremos que se ejecute cada 100 tiks de reloj entonces debemos tener un contador global de ticks, cuando llegue a 100 hacemos la limpieza, esta tiene que buscar las reservas y poder limpiarlas aquellas que tengan estado 2.
+- 5.Modificar el scheduler
+- 6. Tenemos que hacer la pd y pt para la tarea que van a estar en espacio de kernel. Funcion `mmu_init_system_task_dir` muy similar a `mmu_init_task_dir`
+
+## Cosas que debo preguntar sobre garbage collector:
+
+- 1. donde esta la direccion virtual de la tarea.
+- 2.
 
 # DUDAS QUE ME SURGEN:
 
