@@ -173,12 +173,12 @@ _isr14:
 - 4. Ahora con todo para inicializarla debo crear la tarea en si. El proceso que se va a estar corriendo:
   - Queremos que se ejecute cada 100 tiks de reloj entonces debemos tener un contador global de ticks, cuando llegue a 100 hacemos la limpieza, esta tiene que buscar las reservas y poder limpiarlas aquellas que tengan estado 2.
 - 5.Modificar el scheduler
-- 6. Tenemos que hacer la pd y pt para la tarea que van a estar en espacio de kernel. Funcion `mmu_init_system_task_dir` muy similar a `mmu_init_task_dir`
+- 6. Tenemos que hacer la pd y pt para la tarea que van a estar en espacio de kernel. Funcion `mmu_init_system_task_dir` muy similar a `mmu_init_task_dir`, ¿al hacer esto tengo que mapearlo todo al kernel?
 
 ## Cosas que debo preguntar sobre garbage collector:
 
-- 1. donde esta la direccion virtual de la tarea.
-- 2.
+- 1. donde esta la direccion virtual de la tarea y fisica deberia ir la tarea. O puedo asumir en cualquier parte..
+- 2. Cuantas paginas para codigo deberia asignar, no deberia inicializar una pila va a usar la del kernel.
 
 # DUDAS QUE ME SURGEN:
 
