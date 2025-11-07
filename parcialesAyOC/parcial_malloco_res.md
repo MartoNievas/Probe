@@ -246,15 +246,15 @@ Ahora en tss.c, modificamos la creaccion de la tss para que solo tenga stack de 
 ```C
 tss_t tss_create_system_task(paddr_t code_start) {
 
-  uint32_t cr3 = mmu_init_task_system_dir(code_start);
-  vaddr_t code_virt = CODE_VIRTUAL_PAGE; //Direccion virtual de la tarea.
+  uint32_t cr3 = mmu_init_task_system_dir();
+  vaddr_t code_virt = (vaddr_t)code_start; //Direccion virtual de la tarea. es la mimsma que la fisica
   vaddr_t stack = mmu_next_free_kernel_page();
 
-  vaddr_t esp0 = stack + (PAGE_SIZE-1);
+  vaddr_t esp0 = stack + (PAGE_SIZE);
   return (tss_t){
       .cr3 = cr3,
-      .esp = stack,
-      .ebp = stack,
+      .esp = esp0,
+      .ebp = esp0,
       .eip = code_virt,
       .cs = GDT_CODE_0SEL,
       .ds = GDT_DATA_0_SEL,
@@ -285,8 +285,7 @@ paddr_t mmu_init_task_system_dir(paddr_t phy_start)
   // para que el kernel pueda operar cuando la tarea esté activa.
   task_pd[0] = kpd[0];
 
-  //Ahora debemos mapear la pagina de codigo de la tarea (asumo que es una sola);
-  mmu_map_page(cr3, TASK_VIRTUAL_CODE, phy_start, MMU_P); //Tiene que ser de nivel kernel por eso solo el bit de presente
+  //Como el codigo de la tarea vive en el kernel ya esta mapeada por el identity maping
 
   return cr3;
 }
@@ -406,7 +405,7 @@ b) Vamos con la implmentacion de malloco teniendo en cuenta la considreacion men
 void* malloco(size_t size) {
 
   uint32_t task_id = current_task;
-  reservas_por_tarea* registro = &reservas[task_id]; //tenemos el puntero a la reserva de la tarea actual
+  reservas_por_tarea* registro = dameReservas(task_id); //tenemos el puntero a la reserva de la tarea actual
 
   uint32_t memoria_total = 0;
   vaddr_t ultima_dir = BASE_RESERVABLE;
@@ -417,7 +416,7 @@ void* malloco(size_t size) {
       memoria_total += r->tamanio;
       vaddr_t fin = r->virt + r->tamanio;
     }
-    if (ultima_dir < fin ) {
+    if (fin > ultima_dir) {
       ultima_dir = fin;
     }
   }
@@ -445,7 +444,7 @@ c) Para implementar chau vamos a hacer de la siguiente manera: buscamos en las r
 void chau(vaddr_t virt) {
   if (!esMemoriaReservada(virt)) return;
 
-  reserva_por_tarea* registro = &reservas[current_task];
+  reserva_por_tarea* registro = dameReservas(current_task);
   for (int i = 0; i < registro->reserva_size; i++) {
     reserva_t* r = &registro->array_reservas[i];
     //Todavia no fue liberado
@@ -464,7 +463,3 @@ void chau(vaddr_t virt) {
 ```
 
 ## DUDAS QUE ME QUEDARON:
-
-- la funcion `dameReservas` que devuelve
-- Cuando uso el wrapper malloco la reserva que creo es nueva.
-- Luego en el arreglo de reservas por tarea, lo cree del tamanio de la cantidad de tareas que puede albergar el sistema
