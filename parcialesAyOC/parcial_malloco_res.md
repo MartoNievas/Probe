@@ -213,7 +213,7 @@ typedef enum {
 static paddr_t task_code_start[3] = {
     [TASK_A] = TASK_A_CODE_START,
     [TASK_B] = TASK_B_CODE_START,
-    [GARBAGE_COLLECTOR] = TASK_GARBAGE_COLLECTOR_START //Asumimos que existe porque no nos lo dan
+    [GARBAGE_COLLECTOR] = TASK_GARBAGE_COLLECTOR_START //El codigo de inicio de la tarea esta dado por esta etqiueta
 };
 
 //Modificacion de create_task
@@ -285,7 +285,7 @@ paddr_t mmu_init_task_system_dir(paddr_t phy_start)
   // para que el kernel pueda operar cuando la tarea esté activa.
   task_pd[0] = kpd[0];
 
-  //Como el codigo de la tarea vive en el kernel ya esta mapeada por el identity maping
+  //Como el codigo de la tarea vive en el kernel ya esta mapeada por el identity maping, y el comienzo del codigo de la tarea esta dado por la etiqueta TASK_GARBAGE_COLLECTOR_START.
 
   return cr3;
 }

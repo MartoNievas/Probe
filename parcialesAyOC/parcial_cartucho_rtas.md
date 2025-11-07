@@ -42,7 +42,7 @@ typedef enum {
     TASK_RUNNABLE,
     TASK_PAUSED,
     BLOCKED,
-    KILLER          }  task_state_t;
+    KILLED          }  task_state_t;
 
 ```
 
@@ -461,6 +461,62 @@ Por ultimo definimos la tarea killer, vamos a hacer lo de la misma manera en la 
 
 ```C
 
+void task(void) {
+    while(true) {
+        for (int i = 0; i < MAX_TASK + 1; i++) {
+            if (i == current_task) continue; //ya que no queremos matar a esta tarea
+            sched_entry_t* task = &sched_tasks[i]; //Agarramos una tarea que no sea la actual
+
+            if(task->mode != NO_ACCESS_MODE && task->state != BLOCKED && task->state != PAUSED) continue;
+            if(counter_ticks_per_task[i] <= 100) continue;
+
+            //Ahora debemos conseguir la direccion virtual a chequear para ver si fue accedida
+
+            vaddr_t virt_to_check = 0;
+
+            if(task->mode == DMA_MODE) {
+                virt_to_check = DMA_VIRT_DIR; //etiqueta definida anteriormente
+            } else {
+                //Es por copia entonces
+                virt_to_check = task->copyDir;
+            }
+
+            //Ahora debemos verificar que fue accedida
+            pt_entry_t* pt = mmu_get_pt_for_task(task->selector,virt_to_check);
+
+            //Esto significa que fue accedido, damos por hecho que podemos acceder al bit especifico
+            if (pt->accesing) {
+                counter_ticks_per_task[i] = 0;
+                pt_attrs->accesing = 0;
+            } else {
+                task->state = KILLED;
+            }
 
 
+        }
+    }
+}
+```
+
+Definimos la funcion auxiliar ` mmu_get_pt_for_task(uint16_t selector, vaddr_t virt)` que se encarga de traernos el puntero a la page table de la tarea que le pasamos por parametro.
+Todas las macros utilizadas fueron definidas en el tp y la funcion utilizada la defini anteriormente
+
+```C
+pt_entry_t*  mmu_get_pt_for_task(uint16_t selector, vaddr_t virt) {
+    //Uso la funcion que definie para conseguir el cr3 de la tarea
+    paddr_t cr3 =  task_selector_to_cr3(selector);
+
+    //Vamos a obtener los indices en ambas tablas
+    paddr_t pd_index = VIRT_PAGE_DIR(virt);
+    paddr_t pt_index = VIRT_PAGE_TABLE(virt);
+
+    //ahora obtenemos la pd
+    pd_entry_t* pd = (pd_entry_t*)(CR3_TO_PAGE_DIR(cr3));
+
+    //ahora obtenemos la pt
+    pt_entry_t* pt = (pt_entry_t)(MMU_ENTRY_PADDR(pd[pd_index].pt));
+
+
+    return (pt_entry_t*) &(pt[pt_index]);
+}
 ```
