@@ -42,10 +42,11 @@ pushad
 
 push eax
 call malloco ;La logica principal se la dejamos a molloaco que la vamos a implementar mas adelante
-
+; Duda como hago para no borrar la direccion que se guarda en eax despues de malloco? DUDA!!!
 add esp,4
 
 popad
+iret
 ```
 
 Ahora como menciona el enunciado el sistema de **lazy allocation** entonces debemos solo mapear la pagina donde se encuentra la memoria en el momento donde se intenten acceder ya sea por una escritura o una lectura, esta accion va a arrojar un page_fault que va a ser atendida por la rutina `_isr14` la cual deriva su logica principal al **page_fault_handler** ya implementado en el tp, por lo que vamos a modificarlo para que se adapte al nuevo sistema:
@@ -106,21 +107,29 @@ bool page_fault_handler(vaddr_t virt) {
 }
 ```
 
-Ahora vamos a utilizar la variable global declarada en `sched.c` la cual se llama **current_task** indica la tarea actual y vamos a declarar las dos siguiente funciones en `sched.c`:
+Ahora vamos a utilizar la variable global declarada en `sched.c` la cual se llama **current_task** indica la tarea actual y vamos a declarar las dos siguiente funciones en `sched.c`.
+Ademas vamos a modificar los estados que pueden tener las tareas para poder tener un estado **TASK_CLEAR**:
 
 ```C
 uint8_t current_task = 0; //Asi es como se inicializa en sched.c
 //Tambien hay un arreglo global el cual se llama:
+typedef enum {
+  TASK_SLOT_FREE,
+  TASK_RUNNABLE,
+  TASK_PAUSED,
+  TASK_CLEAR //Nuevo estado para indicar que una tarea fue desalojada.
+} task_state_t;
 
 typedef struct {
   int16_t selector;
   task_state_t state;
 } sched_entry_t;
-
-static sched_entry_t sched_tasks[MAX_TASKS] = {0};
+//Para siempre poder tener el garbage collector corriendo.
+static sched_entry_t sched_tasks[MAX_TASKS + 1] = {0};
 //Desaloja la tarea actual
-void sched_pause_current_task() {
-  sched_tasks[current_task].state = TASK_PAUSED;
+void sched_clear_current_task() {
+  sched_tasks[current_task].state = TASK_CLEAR;
+  //Deberia flushear la TSS o invalidar el descriptor? 
 }
 //Marcamos todas las reservas de la tarea acutal para liberar, de eso se va a encargar el garbaje collector
 void sched_free_current_task() {
@@ -146,12 +155,13 @@ _isr14:
     cmp eax,0
     jne .ok
 
-    call sched_pause_current_task ;Pausamos la tarea actual
+    call sched_clear_current_task ;Pausamos la tarea actual
 
     call sched_free_current_task ;Liberamos las reservas de la tarea actaul
 
     call sched_next_task ;llamamos para conmutar de tarea
 
+    ;Aqui realizamos la conmutacion de tareas.
     str cx
     cmp ax, cx
     je .fin
@@ -164,6 +174,103 @@ _isr14:
     add esp, 4          ; limpiamos el error code
     iret
 ```
+
+# Ejercicio 2: (25 puntos)
+
+Detallar todos los cambios que es necesario realizar sobre el kernel para incorporar la tarea garbage_collector si queremos que se ejecute una vez cada 100 ticks del reloj. Incluir una posible implementación del código de la tarea.
+
+## Respuesta: 
+
+Primero debemos crea un nuevo tipo de tarea en `tasks.c` la cual se va a llamar **GARBAGE_COLLECTOR**, luego nesecitamos crear la tss contamos con una funcion `tss_create_user_task`, podemos crear una parecida llamada `tss_create_system_task`, ademas vamos a usar la funcion `create_task`, para poder crearlar usando la funcion `tasks_init`. Vamos a detallar todos los cambios a continuacion: 
+
+En tasks.c
+```C
+typedef enum {
+  TASK_A = 0,
+  TASK_B = 1,
+  GARBAGE_COLLECTOR = 2; //Nuevo tipo de tarea.
+} tipo_e;
+
+static paddr_t task_code_start[3] = {
+    [TASK_A] = TASK_A_CODE_START,
+    [TASK_B] = TASK_B_CODE_START,
+    [GARBAGE_COLLECTOR] = TASK_GARBAGE_COLLECTOR_START //Asumimos que existe porque no nos lo dan
+};
+
+//Modificacion de create_task
+
+static int8_t create_task(tipo_e tipo) {
+  size_t gdt_id;
+  for (gdt_id = GDT_TSS_START; gdt_id < GDT_COUNT; gdt_id++) {
+    if (gdt[gdt_id].p == 0) {
+      break;
+    }
+  }
+  kassert(gdt_id < GDT_COUNT, "No hay entradas disponibles en la GDT");
+
+  //Agrego este if para ver si es la nueva tarea de nivel 0;
+  if (tipo == GARBAGE_COLLECTOR) {
+    int8_t task_id = sched_add_task(gdt_id << 3);
+    tss_tasks[task_id] = tss_create_system_task(task_code_start[tipo]);
+    gdt[gdt_id] = tss_gdt_entry_for_task(&tss_tasks[task_id]);
+    return task_id;
+  }
+  int8_t task_id = sched_add_task(gdt_id << 3);
+  tss_tasks[task_id] = tss_create_user_task(task_code_start[tipo]);
+  gdt[gdt_id] = tss_gdt_entry_for_task(&tss_tasks[task_id]);
+  return task_id;
+}
+```
+Ahora en tss.c: 
+
+```C
+tss_t tss_create_system_task(paddr_t code_start) {
+
+  uint32_t cr3 = mmu_init_task_system_dir(code_start);
+
+  vaddr_t stack = mmu_next_free_kernel_page();
+
+  vaddr_t esp0 = stack + (PAGE_SIZE-1);
+  return (tss_t){
+      .cr3 = cr3,
+      .esp = stack,
+      .ebp = stack,
+      .eip = code_virt,
+      .cs = GDT_CODE_0SEL,
+      .ds = GDT_DATA_0_SEL,
+      .es = GDT_DATA_0_SEL,
+      .fs = GDT_DATA_0_SEL,
+      .gs = GDT_DATA_0_SEL,
+      .ss = GDT_DATA_0_SEL,
+      .ss0 = GDT_DATA_0_SEL,
+      .esp0 = esp0,
+      .eflags = EFLAGS_IF,
+  };
+}
+```
+Vamos a definir `mmu_init_task_system_dir` la cual le copia el identity maping del kernel la tarea
+
+```C
+paddr_t mmu_init_task_system_dir(paddr_t phy_start)
+{
+  // obtengo de mmu_next_free_kernel_page la direccion del nuevo page
+  // directory
+  // + lo inicializo en 0
+  paddr_t task_pd_paddr = mmu_next_free_kernel_page();
+  pd_entry_t *task_pd = (pd_entry_t *)task_pd_paddr;
+  // defino en cr3 la base
+  uint32_t cr3 = task_pd_paddr;
+  // Copiar la entrada del kernel (kpd[0] para el identity mapping)
+  // para que el kernel pueda operar cuando la tarea esté activa.
+  task_pd[0] = kpd[0];
+
+  //Ahora debemos mapear la pagina de codigo de la tarea (asumo que es una sola);
+  mmu_map_page(cr3, TASK_GARBAGE_COLLECTOR_VITUAL, phy_start, MMU_P); //Tiene que ser de nivel kernel por eso solo el bit de presente
+  
+  return cr3;
+}
+```
+
 
 # Para el garbage collector:
 
