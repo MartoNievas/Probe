@@ -7,7 +7,8 @@ Detallar todos los cambios que es necesario realizar sobre el kernel para que un
 Primero que nada `malloco` es una syscall, con lo cual va a poder ser llamada por tareas de usuario, pero en el fondo va a ser antendida por el kernel, comenzemos definiendo una nueve entrada en la **IDT**:
 
 ```C
-IDT_ENTRY3(90)
+IDT_ENTRY3(90) //maloco
+IDT_ENTRY(91) //chau
 ```
 
 Donde la definicion de **IDT_ENTRY3** es:
@@ -24,10 +25,14 @@ Donde la definicion de **IDT_ENTRY3** es:
 ```
 
 Como podemos observar el dpl es 0x3 indica que puede ser llamada por un tarea de nivel usuario, lo cual es exactamente lo que queremos. Con lo cual se podria utilizar de la siguiente manera:
+En ambos casos asumimos que se pasa como parametro por eax.
 
 ```ASM
 mov eax, <Cantidad de bytes a allocar>
 int 90
+
+mov eax, <Cantidad de bytes a allocar>
+int 91
 ```
 
 Ahora debemos implementar el handler que se ocupa del manejo de la syscall que va a ser el siguiente:
@@ -42,11 +47,27 @@ pushad
 
 push eax
 call malloco ;La logica principal se la dejamos a molloaco que la vamos a implementar mas adelante
-; Duda como hago para no borrar la direccion que se guarda en eax despues de malloco? DUDA!!!
+;Sabemos que malloco devuelve una direccion virtual por eax pero si hacemos popad perdemos esa direccion
+;Lo que vamos a hacer es guardarlo en la pila antes del popad
 add esp,4
-
+mov dword [esp + 28], eax ;Porque asi es el orden en el que se pushean los registros en la pila, sacado del manual de intel
+;Con eso nos aseguramos de devolver en eax la direccion virtual del espacio reservado
 popad
 iret
+
+global isr_91
+
+isr_91:
+
+  pushad
+
+  push eax
+  call chau
+  add esp,4
+
+  popad
+  iret
+
 ```
 
 Ahora como menciona el enunciado el sistema de **lazy allocation** entonces debemos solo mapear la pagina donde se encuentra la memoria en el momento donde se intenten acceder ya sea por una escritura o una lectura, esta accion va a arrojar un page_fault que va a ser atendida por la rutina `_isr14` la cual deriva su logica principal al **page_fault_handler** ya implementado en el tp, por lo que vamos a modificarlo para que se adapte al nuevo sistema:
@@ -69,8 +90,8 @@ typedef struct {
 } reserva_t;
 
 //Tenemos declardo como una variblabe global el arreglo:
-// MAX_RESERVATION_ALLOWED no esta declarado porque en el enuncidado del ejercicio menciona que se puede asumir que tenemos el espacio suficiente
-static reservas_por_tarea reservas_t[MAX_RESERVATION_ALLOWED] = {0};
+
+static reservas_por_tarea reservas[MAX_TASKS + 1] = {0};
 
 //page fualt handler hecho en el tp
 bool page_fault_handler(vaddr_t virt) {
@@ -129,16 +150,13 @@ static sched_entry_t sched_tasks[MAX_TASKS + 1] = {0};
 //Desaloja la tarea actual
 void sched_clear_current_task() {
   sched_tasks[current_task].state = TASK_CLEAR;
-  //Deberia flushear la TSS o invalidar el descriptor? 
+  //Deberia flushear la TSS o invalidar el descriptor?
 }
 //Marcamos todas las reservas de la tarea acutal para liberar, de eso se va a encargar el garbaje collector
 void sched_free_current_task() {
-  for (int i = 0; i < MAX_RESERVATION_ALLOWED; i ++) {
-    if (reservas_t[i].task_id == current_task) {
-      for (int j = 0; j < reservas_t[i].reservas_size; j++) {
-        reservas_t[i].array_reservas.estado = 2;
-      }
-    }
+  reservas_por_tarea reserva = reservas[current_task];
+  for (int j = 0; j < reserva.reservas_size; j++) {
+      reserva.array_reservas.estado = 2;
   }
 }
 ```
@@ -179,11 +197,12 @@ _isr14:
 
 Detallar todos los cambios que es necesario realizar sobre el kernel para incorporar la tarea garbage_collector si queremos que se ejecute una vez cada 100 ticks del reloj. Incluir una posible implementación del código de la tarea.
 
-## Respuesta: 
+## Respuesta:
 
-Primero debemos crea un nuevo tipo de tarea en `tasks.c` la cual se va a llamar **GARBAGE_COLLECTOR**, luego nesecitamos crear la tss contamos con una funcion `tss_create_user_task`, podemos crear una parecida llamada `tss_create_system_task`, ademas vamos a usar la funcion `create_task`, para poder crearlar usando la funcion `tasks_init`. Vamos a detallar todos los cambios a continuacion: 
+Primero debemos crea un nuevo tipo de tarea en `tasks.c` la cual se va a llamar **GARBAGE_COLLECTOR**, luego nesecitamos crear la tss contamos con una funcion `tss_create_user_task`, podemos crear una parecida llamada `tss_create_system_task`, ademas vamos a usar la funcion `create_task`, para poder crearlar usando la funcion `tasks_init`. Vamos a detallar todos los cambios a continuacion:
 
 En tasks.c
+
 ```C
 typedef enum {
   TASK_A = 0,
@@ -221,13 +240,14 @@ static int8_t create_task(tipo_e tipo) {
   return task_id;
 }
 ```
-Ahora en tss.c: 
+
+Ahora en tss.c, modificamos la creaccion de la tss para que solo tenga stack de nivel 0, use los segmentos de codigo y datos de nivel 0:
 
 ```C
 tss_t tss_create_system_task(paddr_t code_start) {
 
   uint32_t cr3 = mmu_init_task_system_dir(code_start);
-
+  vaddr_t code_virt = CODE_VIRTUAL_PAGE; //Direccion virtual de la tarea.
   vaddr_t stack = mmu_next_free_kernel_page();
 
   vaddr_t esp0 = stack + (PAGE_SIZE-1);
@@ -248,7 +268,8 @@ tss_t tss_create_system_task(paddr_t code_start) {
   };
 }
 ```
-Vamos a definir `mmu_init_task_system_dir` la cual le copia el identity maping del kernel la tarea
+
+Vamos a definir `mmu_init_task_system_dir` la cual le copia el identity maping del kernel a la tarea y ademas mapea la pagina de codigo en este ejercicio asumo que solo es una pagina de codigo, Ademas asumo que la pila ya esta mapeada, por ultimo para copiar el identity maping usamos la varibale global `kpd` la cual es el **page directory** del kernel que se encuenta en `mmu.c`.
 
 ```C
 paddr_t mmu_init_task_system_dir(paddr_t phy_start)
@@ -265,36 +286,185 @@ paddr_t mmu_init_task_system_dir(paddr_t phy_start)
   task_pd[0] = kpd[0];
 
   //Ahora debemos mapear la pagina de codigo de la tarea (asumo que es una sola);
-  mmu_map_page(cr3, TASK_GARBAGE_COLLECTOR_VITUAL, phy_start, MMU_P); //Tiene que ser de nivel kernel por eso solo el bit de presente
-  
+  mmu_map_page(cr3, TASK_VIRTUAL_CODE, phy_start, MMU_P); //Tiene que ser de nivel kernel por eso solo el bit de presente
+
   return cr3;
 }
 ```
 
+Una vez que tenenmos todas las estructuras modificadas y adaptadas a la nueva tarea de nivel 0, podemos pensar en la implementacion de la misma, aqui vamos a asumir que malloco siempre tiene direcciones alineadas para poder simplificar la limpieza de las paginas, ya que vamos a utilizar la funcion `mmu_unmap_page` para poder mapear las paginas y asi quedaran libres para ser utilizadas en el futuro.
+Implementacion de la tarea es igual que el resto de las tareas del sistema, es una tarea perpetua.
 
-# Para el garbage collector:
+```C
+void task(void) {
 
-- 1. debo crear un nuevo tipo de tarea
-- 2. debo hacer una funcion similar `tss_create_user_task` pero que se llame `tss_create_system_task`
-- 3. Debo usar la funcion `create_task`, para crearla en la funcion tasks_init, debo crear un tarea de tipo GARBAGE_COLLECTOR, tambien podria aumentar el maximo de tareas que ahora es cuatro, para poder tener la 4 tareas de usuario y el garbage collector funcionando. Ademas deberia habilitarla con `sched_enable_task`.
-- 4. Ahora con todo para inicializarla debo crear la tarea en si. El proceso que se va a estar corriendo:
-  - Queremos que se ejecute cada 100 tiks de reloj entonces debemos tener un contador global de ticks, cuando llegue a 100 hacemos la limpieza, esta tiene que buscar las reservas y poder limpiarlas aquellas que tengan estado 2.
-- 5.Modificar el scheduler
-- 6. Tenemos que hacer la pd y pt para la tarea que van a estar en espacio de kernel. Funcion `mmu_init_system_task_dir` muy similar a `mmu_init_task_dir`, ¿al hacer esto tengo que mapearlo todo al kernel?
+  while(true) {
+    for (int i = 0; i < MAX_TASKS + 1; i ++) {
+      reservas_por_tarea reserva = reservas[i];
+      for (int j = 0; j < reserva.reservas_size; j ++) {
+        if (reserva.array_reservas[j].estado == 2) {
+          tss* tss_target = &tss_tasks[reserva.task_id]; //Buscamos el tss para poder obtener el cr3 actual y desmapear la pagina .
 
-## Cosas que debo preguntar sobre garbage collector:
+          paddr_t cr3 = tss_target->cr3;
+          //Asumiendo que esta direccion esta alineada a 4kb si no deberiamos enmascararlo.
+          vaddr_t virt = reserva.array_reservas[j].virt;
 
-- 1. donde esta la direccion virtual de la tarea y fisica deberia ir la tarea. O puedo asumir en cualquier parte..
-- 2. Cuantas paginas para codigo deberia asignar, no deberia inicializar una pila va a usar la del kernel.
+          mmu_unmap_page(cr3,virt);
+        }
+      }
+    }
+  }
+}
+```
 
-# DUDAS QUE ME SURGEN:
+Por ultimo debemos modificar el scheduler para que cada 100 ticks llame a esta tarea de nivel 0, entonces debemos tener una cuanta de los ticks globales para eso vamos a declarar una variable global en `sched.c` llamada **ticks_counter** un uint8_t y una funcion tambien en `sched.c` la cual se va a encargar de aumentar los ticks en la interrupcion del timer.
 
-AHORA ME SURGIO UNA DUDA, entiendo que el page_fault handler me va a retornar false si la posicion de memoria no es reservada por malloco osea es invalida y entonces salta una kernel_exception pero ahora deberia modificar la isr14 para cuando retorne false, desalojar la tarea, marcarla la memoria para que sea liberada y marcarla la tarea como pausada. Si la respuesta es si como puedo hacerlo sin conocer la id de la tarea.
+El codigo en sched.c nos quedaria asi, ademas voy a asumir que la entrada de la **GDT** donde se encuentra la tarea **GARBAGE_COLLECTOR** es la 20:
 
-`el kernel debe desalojar tarea inmediatamente y asegurarse de que no vuelva a correr, marcar la memoria reservada por la misma para que sea liberada y saltar a la próxima tarea.`
+```C
+uint8_t ticks_counter = 0;
 
-- para el ejercicio 1 puedo asumir que malloco esta hecho, si es asi para responder la interrucion tengo que usar la isr?
-- que cosas debo tener en cuenta para poder pedir memoria dinamicamente.
-- Tengo que cambiar el page_fault_handlre completamente o solo agregar esta region de memoria y dejar la on-demand
-- Como se relacionan las estrcutrar que me dan y donde deberian ir.
-- Para el ejercicio ademas de la entrada de la IDT, el isr90, que mas tengo que hacer.
+void inc_ticks_counter(void) {
+  ticks_counter ++;
+}
+
+uint16_t sched_next_task(void) {
+  // Buscamos la próxima tarea viva (comenzando en la actual)
+  if (ticks_counter == 100) {
+    ticks_counter = 0;
+    return (20 << 3); // Este va a ser el tr que indica la entrada de la gdt que describe la tss de la tarea.
+  }
+
+  int8_t i;
+  for (i = (current_task + 1); (i % MAX_TASKS) != current_task; i++) {
+    // Si esta tarea está disponible la ejecutamos
+    if (sched_tasks[i % MAX_TASKS].state == TASK_RUNNABLE) {
+      break;
+    }
+  }
+
+  // Ajustamos i para que esté entre 0 y MAX_TASKS-1
+  i = i % MAX_TASKS;
+
+  // Si la tarea que encontramos es ejecutable entonces vamos a correrla.
+  if (sched_tasks[i].state == TASK_RUNNABLE) {
+    current_task = i;
+    return sched_tasks[i].selector;
+  }
+
+  // En el peor de los casos no hay ninguna tarea viva. Usemos la idle como
+  // selector.
+  return GDT_IDX_TASK_IDLE << 3;
+}
+```
+
+Y tembien vamos a modificar la interrupcion del timer quedaria de la sigueinte manera:
+
+```ASM
+extern inc_ticks_counter
+global _isr32
+
+_isr32:
+  pushad
+  call pic_finish1
+  call inc_ticks_counter //Incrementamos el contador de ticks
+  call sched_next_task
+
+  str cx
+  cmp ax, cx
+  je .fin
+
+  mov word [sched_task_selector], ax
+  jmp far [sched_task_offset]
+
+  .fin:
+  call tasks_tick
+  call tasks_screen_update
+  popad
+  iret
+```
+
+# Ejercicio 3:
+
+a)Indicar dónde podría estár definida la estructura que lleva registro de las reservas (5 puntos).
+
+b)Dar una implementación para malloco (10 puntos).
+
+c)Dar una implementación para chau (10 puntos).
+
+## Respuesta:
+
+a) La estrcutrua que se lleva el registro de las reservas podria estar definido en el modulo de la `mmu.c` al igual que los wrappers de las systems calls que serian malloco y chau. Esto se debe a la realacion que hay entre este nuevo mecanimos que queremos implementar y lo ya esxisten con respecto al TP.
+
+b) Vamos con la implmentacion de malloco teniendo en cuenta la considreacion mencionadas en el enunciado
+
+```C
+//Tenemos los siguientes defines
+#define MAX_RESERVA_TAREA (4 * 1024 * 1024) // cantidad maxima de memoria que se puede reservar
+#define BASE_RESERVABLE 0xA10C0000 //la direccion base donde se empieza a reservar
+
+void* malloco(size_t size) {
+
+  uint32_t task_id = current_task;
+  reservas_por_tarea* registro = &reservas[task_id]; //tenemos el puntero a la reserva de la tarea actual
+
+  uint32_t memoria_total = 0;
+  vaddr_t ultima_dir = BASE_RESERVABLE;
+
+  for (int i = 0; i < registro->reservas_size; i ++) {
+    reserva_t* r = registro->array_reservas[i];
+    if (r->estado == 1) {
+      memoria_total += r->tamanio;
+      vaddr_t fin = r->virt + r->tamanio;
+    }
+    if (ultima_dir < fin ) {
+      ultima_dir = fin;
+    }
+  }
+  //Esto significa que no hay espacio para la tarea.
+  if (memoria_total + size > MAX_RESERVA_TAREA) {
+    return NULL;
+  }
+
+  //Si todavia queda espacio
+  vaddr_t dir_incio = ultima_dir;
+
+  //tenemos que crear una nueva reserva
+  reserva_t* nueva = &registro->array_reservas[registro->reservas_size++];
+  nueva->virt = dir_inicio;
+  nueva->estado = 1; //Esta activa
+  nueva-> tamanio = size;
+
+  return (void*)dir_inicio;
+}
+```
+
+c) Para implementar chau vamos a hacer de la siguiente manera: buscamos en las reservas de la tarea actual, si no esta no hacemos nada, si esta verificamos que tanga estado 1 y la marcamos como estado 2 (para ser liberada por el GARBAGE_COLLECTOR), si tiene estado 0 o 2 no hago nada, y una vez que la encuentro y modifico termino.
+
+```C
+void chau(vaddr_t virt) {
+  if (!esMemoriaReservada(virt)) return;
+
+  reserva_por_tarea* registro = &reservas[current_task];
+  for (int i = 0; i < registro->reserva_size; i++) {
+    reserva_t* r = &registro->array_reservas[i];
+    //Todavia no fue liberado
+    if (r->estado == 1 && r->virt == virt) {
+      r-> estado = 2;
+      return;
+    }
+    //Ya fue liberado
+    if (r->estado == 2 && r->virt == virt) {
+      return;
+    }
+  }
+
+
+}
+```
+
+## DUDAS QUE ME QUEDARON:
+
+- la funcion `dameReservas` que devuelve
+- Cuando uso el wrapper malloco la reserva que creo es nueva.
+- Luego en el arreglo de reservas por tarea, lo cree del tamanio de la cantidad de tareas que puede albergar el sistema
