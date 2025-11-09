@@ -117,11 +117,11 @@ bool page_fault_handler(vaddr_t virt) {
   vaddr_t ALINED_VADDR = virt & 0xFFFFF000 //Enmascaramos los 12 bits bajos de la direccion virtual.
 
   //Nos conseguimos el cr3 de la tarea actual
-  uint32_t cr3 = rcr3();
+  paddr_t cr3 = rcr3();
   paddr_t PHY_PAGE = mmu_next_free_user_page(); //Preguntar si es memoria de usuario o a partir de una direccion especifica dentro de la misma
   zero_page(ALINED_VADDR); //Inicializamos
 
-  mmu_map_page(cr3,ALINEAD_VADD,PHY_PAGE,MMU_P | MMU_W | MMU_U);
+  mmu_map_page(cr3,ALINEAD_VADD,PHY_PAGE, MMU_P | MMU_W | MMU_U);
 
   return true;
 
@@ -272,7 +272,7 @@ tss_t tss_create_system_task(paddr_t code_start) {
 Vamos a definir `mmu_init_task_system_dir` la cual le copia el identity maping del kernel a la tarea y ademas mapea la pagina de codigo en este ejercicio asumo que solo es una pagina de codigo, Ademas asumo que la pila ya esta mapeada, por ultimo para copiar el identity maping usamos la varibale global `kpd` la cual es el **page directory** del kernel que se encuenta en `mmu.c`.
 
 ```C
-paddr_t mmu_init_task_system_dir(paddr_t phy_start)
+paddr_t mmu_init_task_system_dir()
 {
   // obtengo de mmu_next_free_kernel_page la direccion del nuevo page
   // directory
@@ -288,6 +288,33 @@ paddr_t mmu_init_task_system_dir(paddr_t phy_start)
   //Como el codigo de la tarea vive en el kernel ya esta mapeada por el identity maping, y el comienzo del codigo de la tarea esta dado por la etiqueta TASK_GARBAGE_COLLECTOR_START.
 
   return cr3;
+}
+```
+
+Tambien deberiamos cambiar `tasks_init` en `tasks.c` y quedaria de la siguiente manera: 
+
+```C
+void tasks_init(void) {
+  int8_t task_id;
+  // Dibujamos la interfaz principal
+  tasks_screen_draw();
+
+  // Creamos las tareas de tipo A
+  task_id = create_task(TASK_A);
+  sched_enable_task(task_id);
+  task_id = create_task(TASK_A);
+  sched_enable_task(task_id);
+  task_id = create_task(TASK_A);
+  sched_enable_task(task_id);
+
+  // Creamos las tareas de tipo B
+  task_id = create_task(TASK_B);
+  sched_enable_task(task_id);
+
+
+  //Agregamos esta lines para habilitar la nueva tarea. 
+  task_id = create_task(GARBAGE_COLLECTOR);
+  sched_enable_task(task_id); 
 }
 ```
 
