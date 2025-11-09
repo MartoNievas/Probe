@@ -299,14 +299,19 @@ void task(void) {
 
   while(true) {
     for (int i = 0; i < MAX_TASKS + 1; i ++) {
-      reservas_por_tarea reserva = reservas[i];
-      for (int j = 0; j < reserva.reservas_size; j ++) {
-        if (reserva.array_reservas[j].estado == 2) {
-          tss* tss_target = &tss_tasks[reserva.task_id]; //Buscamos el tss para poder obtener el cr3 actual y desmapear la pagina .
+      reservas_por_tarea* reserva = dameReservas(i);
+      for (int j = 0; j < reserva->reservas_size; j ++) {
+        if (reserva->array_reservas[j]->estado == 2) {
+          tss* tss_target = &tss_tasks[reserva.task_id]; //Buscamos el tss para poder obtener el cr3 actual y desmapear la pagina
+          
+          
 
           paddr_t cr3 = tss_target->cr3;
           //Asumiendo que esta direccion esta alineada a 4kb si no deberiamos enmascararlo.
           vaddr_t virt = reserva.array_reservas[j].virt;
+          
+          //Indicamos que la liberamos
+          reserva->estado = 3;
 
           mmu_unmap_page(cr3,virt);
         }
@@ -448,12 +453,12 @@ void chau(vaddr_t virt) {
   for (int i = 0; i < registro->reserva_size; i++) {
     reserva_t* r = &registro->array_reservas[i];
     //Todavia no fue liberado
-    if (r->estado == 1 && r->virt == virt) {
+    if ((r->estado == 1 || r->estado == 0) && r->virt == virt) {
       r-> estado = 2;
       return;
     }
     //Ya fue liberado
-    if (r->estado == 2 && r->virt == virt) {
+    if ((r->estado == 3 || r->estado == 2) && r->virt == virt) {
       return;
     }
   }
