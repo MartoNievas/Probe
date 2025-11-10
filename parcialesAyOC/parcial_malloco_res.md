@@ -441,7 +441,7 @@ void* malloco(size_t size) {
   reserva_t* reserva = registro->array_reservas[registro->reservas_size-1];
 
   vaddr_t virt = reserva.virt;
-  uint32_t memoria_total = virt + reserva.tamanio;
+  vaddr_t ultima_dir = virt + reserva.tamanio;
   
   if (memoria_total - BASE_RESERVABLE + size >= MAX_RESERVA_TAREA) return NULL;
   
