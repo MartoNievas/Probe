@@ -250,7 +250,7 @@ tss_t tss_create_system_task(paddr_t code_start) {
   vaddr_t code_virt = (vaddr_t)code_start; //Direccion virtual de la tarea. es la mimsma que la fisica
   vaddr_t stack = mmu_next_free_kernel_page();
 
-  vaddr_t esp0 = stack + (PAGE_SIZE);
+  vaddr_t esp0 = stack + (PAGE_SIZE - 1);
   return (tss_t){
       .cr3 = cr3,
       .esp = esp0,
@@ -425,9 +425,9 @@ c)Dar una implementación para chau (10 puntos).
 
 ## Respuesta:
 
-a) La estrcutrua que se lleva el registro de las reservas podria estar definido en el modulo de la `mmu.c` al igual que los wrappers de las systems calls que serian malloco y chau. Esto se debe a la realacion que hay entre este nuevo mecanimos que queremos implementar y lo ya esxisten con respecto al TP.
+a) La estructura que se lleva el registro de las reservas podria estar definido en el modulo de la `mmu.c` al igual que los wrappers de las systems calls que serian malloco y chau. Esto se debe a la realacion que hay entre este nuevo mecanismos que queremos implementar y lo ya existente con respecto al TP.
 
-b) Vamos con la implmentacion de malloco teniendo en cuenta la considreacion mencionadas en el enunciado
+b) Vamos con la implmentacion de malloco teniendo en cuenta la considreacion mencionadas en el enunciado, para ello vamos a tener en cuenta que reservas_size es la cantidad de reservas activas
 
 ```C
 //Tenemos los siguientes defines
@@ -438,30 +438,21 @@ void* malloco(size_t size) {
 
   uint32_t task_id = current_task;
   reservas_por_tarea* registro = dameReservas(task_id); //tenemos el puntero a la reserva de la tarea actual
+  reserva_t* reserva = registro->array_reservas[registro->reservas_size-1];
 
-  uint32_t memoria_total = 0;
-  vaddr_t ultima_dir = BASE_RESERVABLE;
-
-  for (int i = 0; i < registro->reservas_size; i ++) {
-    reserva_t* r = registro->array_reservas[i];
-    if (r->estado == 1) {
-      memoria_total += r->tamanio;
-      vaddr_t fin = r->virt + r->tamanio;
-    }
-    if (fin > ultima_dir) {
-      ultima_dir = fin;
-    }
-  }
+  vaddr_t virt = reserva.virt;
+  uint32_t memoria_total = virt + reserva.tamanio;
+  
+  if (memoria_total - BASE_RESERVABLE + size >= MAX_RESERVA_TAREA) return NULL;
+  
   //Esto significa que no hay espacio para la tarea.
-  if (memoria_total + size > MAX_RESERVA_TAREA) {
-    return NULL;
-  }
-
+ 
   //Si todavia queda espacio
   vaddr_t dir_incio = ultima_dir;
 
   //tenemos que crear una nueva reserva
-  reserva_t* nueva = &registro->array_reservas[registro->reservas_size++];
+  reserva_t* nueva = &registro->array_reservas[registro->reservas_size];
+  registro->reservas_size++;
   nueva->virt = dir_inicio;
   nueva->estado = 1; //Esta activa
   nueva-> tamanio = size;
