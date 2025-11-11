@@ -51,7 +51,7 @@ int 91 ;para la syscall juntarse_con
 int 92; para la syscall abandonar pareja
 ```
 
-En la isr vamos a definir la rutina de atencion de la syscall, vamos a usar funciones wrappers para abstraer la logica principal de la rutina de antencion a una funcion en C que se encargue:
+En la isr vamos a definir la rutina de atencion de la syscall, vamos a usar funciones auxiliares para abstraer la logica principal de la rutina de antencion a una funcion en C que se encargue:
 
 ```ASM
 extern crear_pareja
@@ -118,14 +118,14 @@ typedef enum
 } task_state_t;
 ```
 
-Por ultimo para terminar de definir las syscalls tenemos que dar una implementacion de las funciones wrappers. Las cuales van a estar definidas en **mmu.c**:
+Por ultimo para terminar de definir las syscalls tenemos que dar una implementacion de las funciones auxiliares. Las cuales van a estar definidas en **mmu.c**:
 
 ```C
 %define VIRT_PAREJA_ADDR 0xC0C00000
 %define 4MB (4 * 1024 * 1024)
 //Funcion con la logica principal de la syscall crear_parejas
 void crear_pareja (void) {
-    if (aceptando_pareja(current_task)) {
+    if (!aceptando_pareja(current_task)) {
         conformar_pareja(0); //Inicializamos la pareja y la logica la dejamos a parte para esta funcion
     }
 }
@@ -156,6 +156,9 @@ void abandonar_pareja() {
         }
 
         if (sched_tasks[lider_id].state == TASK_LIDER_BLOQUEADO) {
+            for (int addr = VIRT_PAREJA_ADDR; addr < VIRT_PAREJA_ADDR + 4MB; addr++) {
+            mmu_unmap_page(cr3, addr);
+        }
             sched_tasks[lider_id].state = TASK_RUNNABLE;
         } else {
             sched_tasks[lider_id].state = TASK_ESPERANDO_PAREJA;
@@ -166,9 +169,7 @@ void abandonar_pareja() {
         // Soy líder: rompo la pareja, desmapeo y me bloqueo
         romper_pareja();
 
-        for (int addr = VIRT_PAREJA_ADDR; addr < VIRT_PAREJA_ADDR + 4MB; addr++) {
-            mmu_unmap_page(cr3, addr);
-        }
+
 
         sched_tasks[current_task].state = TASK_LIDER_BLOQUEADO;
         sched_next_task();
@@ -327,3 +328,52 @@ bool aceptando_pareja(uint8_t task_id) {
 ## Parte 2: monitoreo de la memoria de las parejas (20 pts)
 
 4. Escribir la función `uso_de_memoria_de_las_parejas`, la cual permite averiguar cuánta memoria está siendo utilizada por el sistema de parejas. Ésta función debe ser implementada por medio de código ó pseudocódigo que corra en nivel 0.
+
+```C
+
+uint32_t uso_de_memoria_de_las_parejas() {
+    uint32_t total = 0;
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        // Contamos solo si es líder o líder esperando (no las no-líderes), asumo que cuando un lider pierde su
+        if (es_lider(i) || sched_tasks[i].state == TASK_LIDER_BLOQUEADO || sched_tasks[i].state == TASK_ESPERANDO_PAREJA ) {
+            paddr_t cr3 = selector_task_to_cr3(sched_tasks[i]);
+            //asumo
+            for (int addr = VIRT_PAREJA_ADDR; addr < VIRT_PAREJA_ADDR + 4MB; addr += PAGE_SIZE) {
+                pt_entry_t* pte = mmu_get_pte_for_task(cr3, addr);
+                if (pte->attrs & MMU_P) { //si esta presente la entrada sumamos uno
+                    total += PAGE_SIZE;
+                }
+            }
+        }
+    }
+
+    return total;
+}
+
+
+```
+
+### Funciones auxiliares:
+
+```C
+
+pt_entry_t*  mmu_get_pte_for_task(uint16_t selector, vaddr_t virt) {
+    //Uso la funcion que definie para conseguir el cr3 de la tarea
+    paddr_t cr3 =  task_selector_to_cr3(selector);
+
+    //Vamos a obtener los indices en ambas tablas
+    paddr_t pd_index = VIRT_PAGE_DIR(virt);
+    paddr_t pt_index = VIRT_PAGE_TABLE(virt);
+
+    //ahora obtenemos la pd
+    pd_entry_t* pd = (pd_entry_t*)(CR3_TO_PAGE_DIR(cr3));
+
+    //ahora obtenemos la pt
+    pt_entry_t* pt = (pt_entry_t)(MMU_ENTRY_PADDR(pd[pd_index].pt));
+
+
+    return (pt_entry_t*) &(pt[pt_index]);
+}
+}
+```

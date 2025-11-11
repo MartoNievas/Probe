@@ -502,7 +502,7 @@ Definimos la funcion auxiliar ` mmu_get_pt_for_task(uint16_t selector, vaddr_t v
 Todas las macros utilizadas fueron definidas en el tp y la funcion utilizada la defini anteriormente
 
 ```C
-pt_entry_t*  mmu_get_pt_for_task(uint16_t selector, vaddr_t virt) {
+pt_entry_t*  mmu_get_pte_for_task(uint16_t selector, vaddr_t virt) {
     //Uso la funcion que definie para conseguir el cr3 de la tarea
     paddr_t cr3 =  task_selector_to_cr3(selector);
 
