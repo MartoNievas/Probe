@@ -1,11 +1,11 @@
 # Resumen: System Programming
 
-Voy a hacer un resumen practico de system prgramming para poder resolver los ejercicios de forma practica y organizada: 
+Voy a hacer un resumen practico de system prgramming para poder resolver los ejercicios de forma practica y organizada:
 
-## Posible casos de ejercicios: 
+## Posible casos de ejercicios:
 
 - Agregar intrupcciones o syscalls al sistema:
-    Para poder agregar una interrupcion al sistema los primero que debemos considerar es que tienen que tener un entrada correspondiente en la **IDT** para poder vectorizar la interrupcion/excepcion/syscall, para ello podemos usar podemos usar las macros definidas en `idt.c`: 
+  Para poder agregar una interrupcion al sistema los primero que debemos considerar es que tienen que tener un entrada correspondiente en la **IDT** para poder vectorizar la interrupcion/excepcion/syscall, para ello podemos usar podemos usar las macros definidas en `idt.c`:
 
 ```C
 // macro para crear una interrupcion o execpcion ya que son de nivel 0
@@ -30,14 +30,17 @@ Voy a hacer un resumen practico de system prgramming para poder resolver los eje
       .dpl = 0x3,                                  \
       .present = 0x01}
 ```
-Tambien se debe crear el handler de interrupcion correspondiente en `isr.asm`, pequeña tabla de como se dividen las interrupciones, excepciones y syscalls: 
-``` textplain
+
+Tambien se debe crear el handler de interrupcion correspondiente en `isr.asm`, pequeña tabla de como se dividen las interrupciones, excepciones y syscalls:
+
+```textplain
     | Rango     | Tipo             | Descripción general                   |
     |:----------|:-----------------|:--------------------------------------|
     | 0–31      | Excepciones      | Errores del CPU (división por cero, protección, etc.) |
     | 32–47     | Interrupciones HW| IRQs del hardware (timer, teclado, etc.) |
     | 48–255    | Syscalls         | Llamadas al sistema o interrupciones definidas por el usuario |
 ```
+
 Para las isr_xx podemos crear wrappers en C para facilitar la logica de la rutina de atencion. Estos mismo wrappers nos conviene declararlos en `idt.c` y usarlos con `extern` en asm.
 
 Otra cosa util es cuando queremos que una isr nos devulva algo por algun registro, por lo general **EAX** podemos utilizar el orden de como se guarda en la pila para poder modificarlo y que cuando se retorne al contexto, retorne el **EAX** con el resultado de la interrupcion por ejemplo un puntero.
@@ -57,121 +60,122 @@ Otra cosa util es cuando queremos que una isr nos devulva algo por algun registr
 
 Simplemente antes de la instruccion **POPAD** con un **mov [ESP + OFFSET]** modificamos el registro del contexto anterior en le cual queremos devolver el resultado de antender la intrrupcion, ademas podemos asumir que los argumento del wrapper o rutina de atencion no llega por algun registro. Por ejemplo **EDI**.
 
-- Nuevo sistema de memoria: 
+- Nuevo sistema de memoria:
 
-    Para implementar un nuevo manejo de memoria va a depender de lo que quermos manejar, a grandes rasgos creo que tenemos 2 casos:
+  Para implementar un nuevo manejo de memoria va a depender de lo que quermos manejar, a grandes rasgos creo que tenemos 2 casos:
 
-    - Memoria para dato: Si este es el caso la estructura que lleva el registro de la memoria reservada para datos nos va
+  - Memoria para dato: Si este es el caso la estructura que lleva el registro de la memoria reservada para datos nos va
     a convenir tenerlo directo en la **mmu.c**, al igual que los wrapper que se encarga de la syscall para reservar memoria si es que fuera necesario tenerla.
 
-    - Memoria para tareas: En esta caso nos va a convenir tener las reservas en el **sched.c** para tener un facil acceso y mas si es estatico. 
+  - Memoria para tareas: En esta caso nos va a convenir tener las reservas en el **sched.c** para tener un facil acceso y mas si es estatico.
 
-    
-    Quizas tambien debamos modificar alguna exepcion ya existente como `page_fault` y nos pidan conmutar de tareas si algo falla en su rutina de antencion. Para eso debemos de poner luego del handler en la isr: 
+  Quizas tambien debamos modificar alguna exepcion ya existente como `page_fault` y nos pidan conmutar de tareas si algo falla en su rutina de antencion. Para eso debemos de poner luego del handler en la isr:
 
-    ```ASM
-        call sched_next_task
+  ```ASM
+      call sched_next_task
 
-        str cx
-        cmp ax, cx
-        je .fin
+      str cx
+      cmp ax, cx
+      je .fin
 
-        mov word [sched_task_selector], ax
-        jmp far [sched_task_offset]
+      mov word [sched_task_selector], ax
+      jmp far [sched_task_offset]
+  ```
+
+- Nueva tarea de nivel 0 o usuario:
+
+  Para implementar nuevas tareas lo principal es plantear todos los cambios que debemos realizar a los modulos, por lo general los modulos a moficias son:
+
+  - **GDT** en la cual debemos agregar un nuevo descriptor de **TSS**.
+  - **TSS** dependiendo si la tarea a implementar es de nivel cero debemos remplazar `tss_create_user_task`, por una funcion que inicialize la **TSS** de una tarea de nivel 0 que podria llamarse `tss_create_user_task` que podria tener la siguiente implementacion.
+
+    ```C
+        tss_t tss_create_system_task(paddr_t code_start) {
+
+    uint32_t cr3 = mmu_init_system_task_dir();
+
+    vaddr_t stack0 = mmu_next_free_kernel_page();
+    vaddr_t esp0 = stack0 + PAGE_SIZE; //Quermos que siempre la pila apunte a la direccion mas alta
+    return (tss_t){
+        .cr3 = cr3,
+        .esp = esp0,
+        .ebp = esp0,
+        .eip = (vaddr_t)code_startz, //como es identity maping dir_virt = dir_phy
+        .cs = GDT_CODE_0_SEL,
+        .ds = GDT_DATA_0_SEL,
+        .es = GDT_DATA_0_SEL,
+        .fs = GDT_DATA_0_SEL,
+        .gs = GDT_DATA_0_SEL,
+        .ss = GDT_DATA_0_SEL,
+        .ss0 = GDT_DATA_0_SEL,
+        .esp0 = esp0,
+        .eflags = EFLAGS_IF,
+    };
+    }
     ```
 
-- Nueva tarea de nivel 0 o usuario: 
+    La cual requiere de una nueva funcion la cual inicializa el esquema de paginacion de la tarea nivel 0, llamada `mmu_init_system_task_dir` que podria tener la siguiente implementacion:
+    (Tendria que ver si tenemos que mapear la pagina de codigo o puedo ausmir que se mapea porque se encuentra en la zona de identity maping del kernel).
 
-    Para implementar nuevas tareas lo principal es plantear todos los cambios que debemos realizar a los modulos, por lo general los modulos a moficias son: 
+    ```C
+    paddr_t mmu_init_killer_task_dir(/* paddr_t phy*/) {
 
-    - **GDT** en la cual debemos agregar un nuevo descriptor de **TSS**.
-    - **TSS** dependiendo si la tarea a implementar es de nivel cero debemos remplazar `tss_create_user_task`, por una funcion que inicialize la **TSS** de una tarea de nivel 0 que podria llamarse ``tss_create_user_task`` que podria tener la siguiente implementacion.  
-
-        ```C
-            tss_t tss_create_system_task(paddr_t code_start) {
-
-        uint32_t cr3 = mmu_init_system_task_dir();
-
-        vaddr_t stack0 = mmu_next_free_kernel_page();
-        vaddr_t esp0 = stack0 + PAGE_SIZE; //Quermos que siempre la pila apunte a la direccion mas alta
-        return (tss_t){
-            .cr3 = cr3,
-            .esp = esp0,
-            .ebp = esp0,
-            .eip = (vaddr_t)code_startz, //como es identity maping dir_virt = dir_phy
-            .cs = GDT_CODE_0_SEL,
-            .ds = GDT_DATA_0_SEL,
-            .es = GDT_DATA_0_SEL,
-            .fs = GDT_DATA_0_SEL,
-            .gs = GDT_DATA_0_SEL,
-            .ss = GDT_DATA_0_SEL,
-            .ss0 = GDT_DATA_0_SEL,
-            .esp0 = esp0,
-            .eflags = EFLAGS_IF,
-        };
-        }
-        ```
-
-        La cual requiere de una nueva funcion la cual inicializa el esquema de paginacion de la tarea nivel 0, llamada `mmu_init_system_task_dir` que podria tener la siguiente implementacion:
-        (Tendria que ver si tenemos que mapear la pagina de codigo o puedo ausmir que se mapea porque se encuentra en la zona de identity maping del kernel).
-        ```C
-        paddr_t mmu_init_killer_task_dir(/* paddr_t phy*/) {
-
-            //Nos hacemos un nuevo cr3
-            paddr_t cr3 = mmu_next_free_kernel_page();
+        //Nos hacemos un nuevo cr3
+        paddr_t cr3 = mmu_next_free_kernel_page();
 
 
-            //Una vez que tenemos el cr3 ahora inicializamo la pd
-            pd_entry_t* pd = (pd_entry_t*)(CR3_TO_PAGE_DIR(cr3));
+        //Una vez que tenemos el cr3 ahora inicializamo la pd
+        pd_entry_t* pd = (pd_entry_t*)(CR3_TO_PAGE_DIR(cr3));
 
-            //Con esto copiamos el identity maping
-            pd[0] = kpd[0];
+        //Con esto copiamos el identity maping
+        pd[0] = kpd[0];
 
-            //Como el codigo de la tarea vive dentro del identity maping al mapearlo ya es accesible
-            
-            //Preguntar si esto seria correcto
-            //mmu_map_page(cr3, VIRTUAL_TASK_CODE_START, phy, MMU_P);
+        //Como el codigo de la tarea vive dentro del identity maping al mapearlo ya es accesible
 
-            return cr3;
-        }
-        ```
+        //Preguntar si esto seria correcto
+        //mmu_map_page(cr3, VIRTUAL_TASK_CODE_START, phy, MMU_P);
 
-        Si la tarea es de nivel 3, no es necesario hacer todas estas implementacion
-    - **tasks.c** Aqui debemos definir varias cosas, si es necesario definir un nuevo tipo de tarea en **tasks.c** y agregar la direccion de inicio del codigo de la tarea en el array **task_code_start**. Si la nueva tarea es de nivel 0 debemos modificar la funcion `create_task` para que contemple el caso de la nueva tarea nivel 0 y usar las funciones definidas anterioremente en **tss.c**. Por ultimo deberiamos modificar `init_tasks` para poder inicialzar la nueva tarea.
+        return cr3;
+    }
+    ```
 
-        ```C
-            /**
-        * Tipos de tareas soportados por el sistema
-        */
-        typedef enum {
-        TASK_A = 0,
-        TASK_B = 1,
-        // Nuevo tipo = 2 ...
-        } tipo_e;
+    Si la tarea es de nivel 3, no es necesario hacer todas estas implementacion
 
+  - **tasks.c** Aqui debemos definir varias cosas, si es necesario definir un nuevo tipo de tarea en **tasks.c** y agregar la direccion de inicio del codigo de la tarea en el array **task_code_start**. Si la nueva tarea es de nivel 0 debemos modificar la funcion `create_task` para que contemple el caso de la nueva tarea nivel 0 y usar las funciones definidas anterioremente en **tss.c**. Por ultimo deberiamos modificar `init_tasks` para poder inicialzar la nueva tarea.
+
+    ```C
         /**
-        * Array que nos permite mapear un tipo de tarea a la dirección física de su
-        * código.
-        */
-        static paddr_t task_code_start[2] = {
-            [TASK_A] = TASK_A_CODE_START,
-            [TASK_B] = TASK_B_CODE_START,
-         // [Nuevo_tipo] = TASK_NUEVO_TIPO_CODE_START
-        };
-        ```
-    - **sched.c** en algunaos casos es importante agregar un nuevo estado para las tareas de usuario, para darle otra semantica a las acciones de la nueva tarea. Y en algunas casos debemos modifcar `sched_next_task` para tener en cuenta nuevos comportamientos. Tambien aumentar la cantidad de tareas del sistema para que estas nuevas puedan correr en simultaneo con las ya existentes.
+    * Tipos de tareas soportados por el sistema
+    */
+    typedef enum {
+    TASK_A = 0,
+    TASK_B = 1,
+    // Nuevo tipo = 2 ...
+    } tipo_e;
 
-    - **Implementacion de la Tarea** aqui debemos crear la tarea como cualquier otra del sistema creando la funcion `void task (void)`, con un ciclo infinito **while (true)** e implementar el comportamiento pedido.
+    /**
+    * Array que nos permite mapear un tipo de tarea a la dirección física de su
+    * código.
+    */
+    static paddr_t task_code_start[2] = {
+        [TASK_A] = TASK_A_CODE_START,
+        [TASK_B] = TASK_B_CODE_START,
+     // [Nuevo_tipo] = TASK_NUEVO_TIPO_CODE_START
+    };
+    ```
+
+  - **sched.c** en algunaos casos es importante agregar un nuevo estado para las tareas de usuario, para darle otra semantica a las acciones de la nueva tarea. Y en algunas casos debemos modifcar `sched_next_task` para tener en cuenta nuevos comportamientos. Tambien aumentar la cantidad de tareas del sistema para que estas nuevas puedan correr en simultaneo con las ya existentes.
+
+  - **Implementacion de la Tarea** aqui debemos crear la tarea como cualquier otra del sistema creando la funcion `void task (void)`, con un ciclo infinito **while (true)** e implementar el comportamiento pedido.
 
 ## Funciones que pueden resultar utiles:
 
-Aqui vamos a definir un conjunto de funciones auxiliares que pueden resultar utilies dependiendo de contexto y de que datos dispongamos: 
+Aqui vamos a definir un conjunto de funciones auxiliares que pueden resultar utilies dependiendo de contexto y de que datos dispongamos:
 
-
-Esta funcion sirve para conseguir el cr3 de una tarea especifica a partir de su selector. 
+Esta funcion sirve para conseguir el cr3 de una tarea especifica a partir de su selector.
 Util para el contexto de una tarea en el que no dispongamos del cr3, de tal manera se puede
 obtener con rcr3().
-    
+
 ```C
     paddr_t task_selector_to_cr3 (uint16_t selector) {
         //Nos pasan un selector lo shifteo 3 veces a la derecha
@@ -191,11 +195,11 @@ obtener con rcr3().
         return cr3;
     }
 ```
-    
-Esta funcion sirve para pasar de una direccion virtual a una direccion fisica en caso de que 
-querramos copiar el contenido de una pagina o nesecitemos mapear otra direccion virtual a 
+
+Esta funcion sirve para pasar de una direccion virtual a una direccion fisica en caso de que
+querramos copiar el contenido de una pagina o nesecitemos mapear otra direccion virtual a
 una misma pagina.
-    
+
 ```C
     paddr_t  virt_to_phy(paddr_t cr3, vaddr_t virt) {
         //Ambas macros definidas en el tp;
@@ -215,8 +219,10 @@ una misma pagina.
 
         return phy_add;
 ```
+
 Esta funcion te retorna un puntero del descriptor especifico de la page table de proceso actual,
 se puede sustituir el selector, directamente por el cr3.
+
 ```C
     pt_entry_t*  mmu_get_pt_for_task(uint16_t selector, vaddr_t virt) {
         //Uso la funcion que definie para conseguir el cr3 de la tarea
@@ -238,8 +244,12 @@ se puede sustituir el selector, directamente por el cr3.
 }
 ```
 
-## Consejos: 
+## Cosas que pueden servir:
+
+- El cr3 solo nos interesan los bits de las base de la pd, el resto son bit relacionados con la memoria cache
+
+## Consejos:
 
 - 1. Siempre se pueden usar marcos, defines y variables globales definidas en el tp
-- 2. Tambien no es determinante no poner las estrcuturas en el modulo correcto a menos que el enunciado lo pida. 
+- 2. Tambien no es determinante no poner las estrcuturas en el modulo correcto a menos que el enunciado lo pida.
 - 3. Podemos crear las estructuras y funciones auxiliares que queremos mientras justifiquemos su propoisito (No hay que hacer nada muy entreverado).

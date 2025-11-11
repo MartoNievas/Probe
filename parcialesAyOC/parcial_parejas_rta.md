@@ -86,7 +86,6 @@ isr_92:
     pushad
 
     call abandonar_pareja
-    mov [esp+28], eax
 
     popad
     iret
@@ -121,8 +120,8 @@ typedef enum
 Por ultimo para terminar de definir las syscalls tenemos que dar una implementacion de las funciones auxiliares. Las cuales van a estar definidas en **mmu.c**:
 
 ```C
-%define VIRT_PAREJA_ADDR 0xC0C00000
-%define 4MB (4 * 1024 * 1024)
+%define VIRT_PAREJA_ADDR 0xC0C00000 //Direccion base de los 4mb de memoria compartida por las tareas
+%define 4MB (4 * 1024 * 1024) //Tamanio maximo del area de memoria compartidas por parejas
 //Funcion con la logica principal de la syscall crear_parejas
 void crear_pareja (void) {
     if (!aceptando_pareja(current_task)) {
@@ -133,8 +132,25 @@ void crear_pareja (void) {
 uint8_t juntarse_con(uint8_t id_task) {
 
 
-    if(aceptando_pareja(id_task)) {
+    if(aceptando_pareja(id_task) && ! acceptando_pareja(current_task)) {
         conformar_pareja(id_task);
+
+        //ahora tenemos que tener en cuenta que la tarea lider id_task pude ya tener paginas mapeadas de la mememoria compartida por eso deberiamos mapearla a la pareja que es la tarea actual
+        sched_entry_t lider_task = sched_tasks[id_task];
+        sched_entry_t current = sched_tasks[current_task];
+        //deberiamos conseguir el cr3 de ambas
+
+        paddr_t cr3_lider = selector_task_to_cr3(task.selector);
+        paddr_t cr3_current = selector_task_to_cr3(current.selector);
+        //ahora tenemos que conseguir las entradas de la tarea lider de su pt y mapearla a la tarea actual
+        for (vaddr_t virt = VIRT_PAREJA_ADDR ; virt < VIRT_PAREJA_ADDR + 4MB; virt += PAGE_SIZE) {
+            pt_entry_t* pte_lider = mmu_get_pte_for_task(current.selector, virt);
+            //ahora con la entrada debemos buscar la direccion fisica si la entrada esta presente.
+            if ((pte_lider->attrs & MMU_P) && *pte_lider != 0 ) {
+                paddr_t phy_addr_lider = pte_lider->page;
+                mmu_map_page(cr3_current,virt,phy_addr_lider,MMU_P | MMU_U); // le ponemos usuario
+            }
+        }
         return 0;
     }
 
@@ -202,12 +218,12 @@ bool page_fault_handler(vaddr_t virt)
   if (virt >= VIRT_PAREJA_ADDR && virt < VIRT_PAREJA_ADDR + 4MB) {
     if (es_lider(current_task)) {
         //Si la tarea actual es lider, entonces puede escribir
-        mmu_map_page(rcr3(),virt,phy_addr,MMU_P | MMU_W | MMU_U);
-        mmu_map_page(selector_task_to_cr3(sched_tasks[actual_de_pareja()].selector),virt,phy,MMU_P | MMU_U);
-    } else {
-        // Si no es lider, mapeo a la pareja de la actual para que pueda escribir.
         mmu_map_page(rcr3(),virt,phy_addr,MMU_P | MMU_U);
         mmu_map_page(selector_task_to_cr3(sched_tasks[actual_de_pareja()].selector),virt,phy,MMU_P | MMU_U | MMU_W);
+    } else {
+        // Si no es lider, mapeo a la pareja de la actual para que pueda escribir.
+        mmu_map_page(rcr3(),virt,phy_addr,MMU_P | MMU_U | MMU_W);
+        mmu_map_page(selector_task_to_cr3(sched_tasks[actual_de_pareja()].selector),virt,phy,MMU_P | MMU_U );
     }
     zero_page(virt & (0xfffff000)); //Zereamos la pagina asignada.
     return true;
@@ -357,7 +373,6 @@ uint32_t uso_de_memoria_de_las_parejas() {
 ### Funciones auxiliares:
 
 ```C
-
 pt_entry_t*  mmu_get_pte_for_task(uint16_t selector, vaddr_t virt) {
     //Uso la funcion que definie para conseguir el cr3 de la tarea
     paddr_t cr3 =  task_selector_to_cr3(selector);
@@ -370,10 +385,20 @@ pt_entry_t*  mmu_get_pte_for_task(uint16_t selector, vaddr_t virt) {
     pd_entry_t* pd = (pd_entry_t*)(CR3_TO_PAGE_DIR(cr3));
 
     //ahora obtenemos la pt
+    pd_entry_t pde = (pd_entry_t)pd[pd_index];
+
+    if (!(pde.attrs & MMU_P)) {
+        return 0;
+    }
+
     pt_entry_t* pt = (pt_entry_t)(MMU_ENTRY_PADDR(pd[pd_index].pt));
 
+    pt_entry_t pte = (pt_entry_t)pt[pt_index];
 
-    return (pt_entry_t*) &(pt[pt_index]);
-}
+    if(!(pte.attrs & MMU_P)) {
+        return 0;
+    }
+
+    return (pt_entry_t*) &pte;
 }
 ```
