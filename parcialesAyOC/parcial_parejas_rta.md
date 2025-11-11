@@ -163,19 +163,20 @@ void abandonar_pareja() {
     paddr_t cr3 = selector_task_to_cr3(sched_tasks[current_task]);
 
     if (!es_lider(current_task)) {
-        uint8_t lider_id = pareja_actual();
+        uint8_t lider_id = pareja_de_actual();
 
         romper_pareja(); // rompe el vínculo lógico
 
         for (int addr = VIRT_PAREJA_ADDR; addr < VIRT_PAREJA_ADDR + 4MB; addr++) {
             mmu_unmap_page(cr3, addr);
         }
-
+        sched_tasks[current_task].state = TASK_RUNNABLE;
         if (sched_tasks[lider_id].state == TASK_LIDER_BLOQUEADO) {
             for (int addr = VIRT_PAREJA_ADDR; addr < VIRT_PAREJA_ADDR + 4MB; addr++) {
-            mmu_unmap_page(cr3, addr);
-        }
+            mmu_unmap_page(selector_task_to_cr3(sched_tasks[lider_id].selector), addr);
             sched_tasks[lider_id].state = TASK_RUNNABLE;
+        }
+
         } else {
             sched_tasks[lider_id].state = TASK_ESPERANDO_PAREJA;
             sched_next_task();
@@ -185,10 +186,7 @@ void abandonar_pareja() {
         // Soy líder: rompo la pareja, desmapeo y me bloqueo
         romper_pareja();
 
-
-
         sched_tasks[current_task].state = TASK_LIDER_BLOQUEADO;
-        sched_next_task();
     }
 }
 
