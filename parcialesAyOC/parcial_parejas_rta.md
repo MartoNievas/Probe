@@ -326,4 +326,4 @@ bool aceptando_pareja(uint8_t task_id) {
 
 ## Parte 2: monitoreo de la memoria de las parejas (20 pts)
 
-4.
+4. Escribir la función `uso_de_memoria_de_las_parejas`, la cual permite averiguar cuánta memoria está siendo utilizada por el sistema de parejas. Ésta función debe ser implementada por medio de código ó pseudocódigo que corra en nivel 0.

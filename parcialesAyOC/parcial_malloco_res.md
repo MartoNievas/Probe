@@ -291,7 +291,7 @@ paddr_t mmu_init_task_system_dir()
 }
 ```
 
-Tambien deberiamos cambiar `tasks_init` en `tasks.c` y quedaria de la siguiente manera: 
+Tambien deberiamos cambiar `tasks_init` en `tasks.c` y quedaria de la siguiente manera:
 
 ```C
 void tasks_init(void) {
@@ -312,9 +312,9 @@ void tasks_init(void) {
   sched_enable_task(task_id);
 
 
-  //Agregamos esta lines para habilitar la nueva tarea. 
+  //Agregamos esta lines para habilitar la nueva tarea.
   task_id = create_task(GARBAGE_COLLECTOR);
-  sched_enable_task(task_id); 
+  sched_enable_task(task_id);
 }
 ```
 
@@ -329,24 +329,43 @@ void task(void) {
       reservas_por_tarea* reserva = dameReservas(i);
       for (int j = 0; j < reserva->reservas_size; j ++) {
         if (reserva->array_reservas[j]->estado == 2) {
-          tss* tss_target = &tss_tasks[reserva.task_id]; //Buscamos el tss para poder obtener el cr3 actual y desmapear la pagina
-          
-          
 
-          paddr_t cr3 = tss_target->cr3;
+          paddr_t cr3 = task_selector_to_cr3(sched_tasks[reserva->task_id].selector);
           //Asumiendo que esta direccion esta alineada a 4kb si no deberiamos enmascararlo.
           vaddr_t virt = reserva.array_reservas[j].virt;
-          
+
           //Indicamos que la liberamos
           reserva->estado = 3;
           //Desmapeamos las n paginas.
-          for (vaddr_t virt_next = virt; i < virt + reserva.array_reservas[j].tamanio; i += PAGE_SIZE) {
+          for (vaddr_t virt_next = virt; virt_next < virt + reserva.array_reservas[j].tamanio; virt_next += PAGE_SIZE) {
             mmu_unmap_page(cr3,virt_next);
           }
         }
       }
     }
   }
+}
+```
+
+Donde `task_selector_to_cr3` es la funcion auxiliar definida de la siguiente manera, la cual obtiene el cr3 de la tarea actual.
+
+```C
+paddr_t task_selector_to_cr3 (uint16_t selector) {
+    //Nos pasan un selector lo shifteo 3 veces a la derecha
+
+    //Lo shifteo para obtener el indice de la gdt
+    uint32_t gdt_index = (uint32_t)(selector >> 3);
+    //a partir de eso obtengo el descriptor de la tss
+    gdt_entry_t tss_descriptor = gdt[gdt_index];
+
+    vaddr_t base_tss = (tss_descriptor.base_31_24 << 24)| (tss_descriptor.base_23_16 << 16) |(tss_descriptor.base_15_0);
+    //armo la base de la tss
+    tss_t* tss_target = (tss_t*)(base_tss);
+
+    //Extraigo el campo del cr3
+    paddr_t cr3 = tss_targer->cr3;
+
+    return cr3;
 }
 ```
 
@@ -444,11 +463,11 @@ void* malloco(size_t size) {
 
   vaddr_t virt = reserva.virt;
   vaddr_t ultima_dir = virt + reserva.tamanio;
-  
+
   if (memoria_total - BASE_RESERVABLE + size >= MAX_RESERVA_TAREA) return NULL;
-  
+
   //Esto significa que no hay espacio para la tarea.
- 
+
   //Si todavia queda espacio
   vaddr_t dir_incio = ultima_dir;
 
