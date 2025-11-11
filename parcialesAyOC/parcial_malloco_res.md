@@ -339,8 +339,10 @@ void task(void) {
           
           //Indicamos que la liberamos
           reserva->estado = 3;
-
-          mmu_unmap_page(cr3,virt);
+          //Desmapeamos las n paginas.
+          for (vaddr_t virt_next = virt; i < virt + reserva.array_reservas[j].tamanio; i += PAGE_SIZE) {
+            mmu_unmap_page(cr3,virt_next);
+          }
         }
       }
     }
