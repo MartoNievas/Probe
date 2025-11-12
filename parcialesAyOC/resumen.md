@@ -248,6 +248,32 @@ se puede sustituir el selector, directamente por el cr3.
 
 - El cr3 solo nos interesan los bits de las base de la pd, el resto son bit relacionados con la memoria cache
 
+## Entradas de tablas y distrubicion de bits:
+
+**Descriptor de Segmentos**:
+
+![Flujo del sistema](./img/selector_segemento.png)
+
+**Tipos de Selectores de Segmentos**:
+
+![Flujo del sistema](./img/tipos_segmentos.png)
+
+**Registro de Control CR0**:
+
+![Flujo del sistema](./img/cr0.png)
+
+**Puerta de Interrupcion**:
+
+![Flujo del sistema](./img/interrup_gate.png)
+
+**Registro de Control CR3**:
+
+![Flujo del sistema](./img/cr3.png)
+
+**Descriptor de TSS**:
+
+![Flujo del sistema](./img/tss.png)
+
 ## Consejos:
 
 - 1. Siempre se pueden usar marcos, defines y variables globales definidas en el tp

@@ -174,12 +174,12 @@ void abandonar_pareja() {
         if (sched_tasks[lider_id].state == TASK_LIDER_BLOQUEADO) {
             for (int addr = VIRT_PAREJA_ADDR; addr < VIRT_PAREJA_ADDR + 4MB; addr++) {
             mmu_unmap_page(selector_task_to_cr3(sched_tasks[lider_id].selector), addr);
-            sched_tasks[lider_id].state = TASK_RUNNABLE;
+            sched_tasks[lider_id].lider = false; //Le sacamos lider
+            sched_tasks[lider_id].state = TASK_RUNNABLE; //La ponemos runnable porque ya se rompio la pareja
         }
 
         } else {
-            sched_tasks[lider_id].state = TASK_ESPERANDO_PAREJA;
-            sched_next_task();
+            sched_tasks[lider_id].state = TASK_ESPERANDO_PAREJA; //si no estaba bloqueda la dejamos esperando otra paraja.
         }
 
     } else {
