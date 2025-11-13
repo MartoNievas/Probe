@@ -201,12 +201,13 @@ void opendevice(vaddr_t copyDir) {
 void closedevice(void) {
     //Lo que tengo que hacer es desmapear si el modo es DMA o dejar de copiar si el modo es copy
     if (sched_tasks[current_task].mode == ACCESS_DMA) {
-        mmu_unmap_page(rcr3(),sched_tasks[current_task].copyDir);
+        mmu_unmap_page(rcr3(),(vaddt_t)BABAB000);
     }
     //tengo que desmapear la pagina que se pidio
     if (sched_tasks[current_task].mode == ACCESS_COPY) {
-        sched_tasks[current_task] = NO_ACCESS_MODE;
+        mmu_unmap_page(rcr3(),sched_tasks[current_task].copyDir);
     }
+    sched_tasks[current_task] = NO_ACCESS_MODE;
 }
 //Preguntar
 ```
