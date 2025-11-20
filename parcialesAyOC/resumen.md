@@ -261,11 +261,8 @@ se puede sustituir el selector, directamente por el cr3.
 **Registro de Control CR0**:
 
 ![Flujo del sistema](./img/cr0.png)
-
-**Puerta de Interrupcion**:
-
-![Flujo del sistema](./img/interrup_gate.png)
-
+'
+'
 **Registro de Control CR3**:
 
 ![Flujo del sistema](./img/cr3.png)
